@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TwinFit — Interactive Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --primary:#FF5E1A;--bg:#0A0A0A;--s0:#141414;--s1:#1C1C1C;--s2:#242424;
+    --tp:#F5F0EA;--tm:#7A7570;--td:#3A3835;
+  }
+  body{background:var(--bg);color:var(--tp);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 60px;}
+  canvas#bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+
+  .hero{position:relative;z-index:1;text-align:center;margin-bottom:60px;}
+  .logo-ring{position:relative;width:140px;height:140px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;}
+  .ring{position:absolute;border-radius:50%;border:1px dashed rgba(255,94,26,0.35);}
+  .ring-1{width:140px;height:140px;animation:spin 8s linear infinite;}
+  .ring-2{width:100px;height:100px;animation:spin 12s linear infinite reverse;}
+  .flame{font-size:44px;animation:pulse 2s ease-in-out infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+  h1{font-family:'Bebas Neue',cursive;font-size:72px;letter-spacing:4px;
+    background:linear-gradient(135deg,#FF5E1A,#FF8C42,#FFB380);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+  .tagline{color:var(--tm);font-size:13px;letter-spacing:3px;}
+
+  .pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;width:100%;max-width:960px;position:relative;z-index:1;}
+
+  .page-card{
+    display:flex;align-items:center;gap:16px;padding:20px 22px;
+    background:var(--s0);border:1px solid rgba(255,255,255,0.06);border-radius:20px;
+    text-decoration:none;color:inherit;transition:all 0.25s ease;cursor:pointer;
+  }
+  .page-card:hover{border-color:rgba(255,94,26,0.5);background:rgba(255,94,26,0.06);transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,94,26,0.15);}
+  .page-card:active{transform:translateY(0);}
+
+  .card-num{
+    font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:2px;color:var(--primary);
+    background:rgba(255,94,26,0.12);border:1px solid rgba(255,94,26,0.25);
+    border-radius:10px;padding:4px 10px;white-space:nowrap;flex-shrink:0;
+  }
+  .card-icon{font-size:28px;flex-shrink:0;}
+  .card-info{flex:1;}
+  .card-title{font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:2px;color:var(--tp);margin-bottom:2px;}
+  .card-desc{font-size:12px;color:var(--tm);line-height:1.5;}
+  .card-arrow{color:var(--primary);font-size:18px;flex-shrink:0;opacity:0.6;transition:opacity 0.2s,transform 0.2s;}
+  .page-card:hover .card-arrow{opacity:1;transform:translateX(4px);}
+
+  .tech-badge{
+    display:flex;gap:8px;margin:48px 0 24px;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;
+  }
+  .badge{padding:5px 14px;border-radius:100px;font-size:11px;letter-spacing:1px;font-weight:500;
+    background:var(--s1);border:1px solid rgba(255,255,255,0.08);color:var(--tm);}
+  .badge.hot{background:rgba(255,94,26,0.1);border-color:rgba(255,94,26,0.3);color:var(--primary);}
+
+  .footer{margin-top:60px;text-align:center;color:var(--td);font-size:12px;position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<div class="hero">
+  <div class="logo-ring">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <span class="flame">🔥</span>
+  </div>
+  <h1>TWINFIT</h1>
+  <p class="tagline">INTERACTIVE DEMO — SELECT A SCREEN</p>
+</div>
+
+<div class="tech-badge">
+  <span class="badge hot">REACT WEB</span>
+  <span class="badge">TAILWIND CSS</span>
+  <span class="badge">FRAMER MOTION</span>
+  <span class="badge">REACTBITS ANIMATIONS</span>
+  <span class="badge hot">CLAUDE AI</span>
+  <span class="badge">VITE + TS</span>
+</div>
+
+<div class="pages-grid">
+  <a href="01-splash.html" class="page-card">
+    <span class="card-num">01</span>
+    <span class="card-icon">✨</span>
+    <div class="card-info">
+      <div class="card-title">SPLASH</div>
+      <div class="card-desc">Animated rings, particle burst, brand entrance with Aurora background</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="02-login.html" class="page-card">
+    <span class="card-num">02</span>
+    <span class="card-icon">🔐</span>
+    <div class="card-info">
+      <div class="card-title">LOGIN</div>
+      <div class="card-desc">Email + password form, social auth buttons, focus animations</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="03-signup.html" class="page-card">
+    <span class="card-num">03</span>
+    <span class="card-icon">📝</span>
+    <div class="card-info">
+      <div class="card-title">SIGN UP</div>
+      <div class="card-desc">5-step onboarding: profile, body metrics, diet, goals & avatar, duo code</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="04-mode-select.html" class="page-card">
+    <span class="card-num">04</span>
+    <span class="card-icon">❤️</span>
+    <div class="card-info">
+      <div class="card-title">MODE SELECT</div>
+      <div class="card-desc">Couple or Besties mode selection with interactive card states</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="05-home.html" class="page-card">
+    <span class="card-num">05</span>
+    <span class="card-icon">🏠</span>
+    <div class="card-info">
+      <div class="card-title">HOME</div>
+      <div class="card-desc">Streak hero with CountUp, 7-day strip, duo status, quick actions</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="06-log.html" class="page-card">
+    <span class="card-num">06</span>
+    <span class="card-icon">📸</span>
+    <div class="card-info">
+      <div class="card-title">LOG SESSION</div>
+      <div class="card-desc">Animated viewfinder, scan line, corner brackets, snap action</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="07-evolve.html" class="page-card">
+    <span class="card-num">07</span>
+    <span class="card-icon">⭐</span>
+    <div class="card-info">
+      <div class="card-title">EVOLVE</div>
+      <div class="card-desc">Bronze→Silver→Gold→Diamond tier path with animated progress orbs</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a href="08-nutrition.html" class="page-card">
+    <span class="card-num">08</span>
+    <span class="card-icon">🥗</span>
+    <div class="card-info">
+      <div class="card-title">NUTRITION</div>
+      <div class="card-desc">Recipe Engine + Meal Scan tabs, macro bars, AI-powered analysis</div>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+</div>
+
+<div class="footer">TwinFit · Duo Fitness Streaks · Built with Claude AI</div>
+
+<script>
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+let W, H;
+const resize = () => { W = canvas.width = innerWidth; H = canvas.height = innerHeight; };
+resize(); window.addEventListener('resize', resize);
+
+const blobs = [
+  { x:0.2, y:0.3, r:0.4, dx:0.0002, dy:0.0001, c:'#FF5E1A' },
+  { x:0.8, y:0.6, r:0.35, dx:-0.0001, dy:0.0002, c:'#FF8C42' },
+  { x:0.5, y:0.9, r:0.3, dx:0.0001, dy:-0.0001, c:'#FF5E1A' },
+];
+(function draw() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0A0A0A'; ctx.fillRect(0,0,W,H);
+  blobs.forEach(b => {
+    b.x+=b.dx; b.y+=b.dy;
+    if(b.x<0||b.x>1) b.dx*=-1;
+    if(b.y<0||b.y>1) b.dy*=-1;
+    const g=ctx.createRadialGradient(b.x*W,b.y*H,0,b.x*W,b.y*H,b.r*Math.max(W,H));
+    g.addColorStop(0,b.c+'28'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  });
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

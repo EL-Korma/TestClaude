@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>08 · Nutrition — TwinFit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#FF5E1A;--bg:#0A0A0A;--s0:#141414;--s1:#1C1C1C;--s2:#242424;--tp:#F5F0EA;--tm:#7A7570;--td:#3A3835;}
+html,body{height:100%;background:#0A0A0A;font-family:'DM Sans',sans-serif;}
+canvas{position:fixed;inset:0;pointer-events:none;}
+.phone{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:390px;height:844px;max-height:100vh;background:var(--bg);border-radius:40px;box-shadow:0 0 80px rgba(59,130,246,0.08),inset 0 0 0 1px rgba(255,255,255,0.07);overflow:hidden;display:flex;flex-direction:column;}
+@media(max-width:420px){.phone{border-radius:0;width:100vw;height:100vh;top:0;left:0;transform:none;}}
+.scroll{flex:1;overflow-y:auto;scrollbar-width:none;padding:52px 22px 24px;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* Header */
+.header{margin-bottom:16px;}
+.header p{font-size:10px;letter-spacing:2.5px;color:var(--tm);margin-bottom:4px;}
+.header h1{font-family:'Bebas Neue',cursive;font-size:48px;letter-spacing:3px;color:var(--tp);}
+
+/* Tabs */
+.tabs{display:flex;gap:0;background:var(--s0);border-radius:16px;padding:4px;margin-bottom:16px;}
+.tab-btn{flex:1;height:40px;border-radius:12px;border:none;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:12px;letter-spacing:1.5px;transition:all 0.25s;background:transparent;color:var(--tm);}
+.tab-btn.active{background:linear-gradient(135deg,#FF5E1A,#FF8C42);color:#fff;}
+
+/* Tab panes */
+.pane{display:none;flex-direction:column;gap:12px;}
+.pane.active{display:flex;}
+
+/* Cards */
+.card{background:var(--s0);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:16px 18px;}
+.lbl{font-size:10px;letter-spacing:2px;color:var(--tm);margin-bottom:10px;display:block;}
+
+/* Ingredient input */
+.ing-row{display:flex;gap:8px;margin-bottom:10px;}
+.input{flex:1;height:48px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.08);background:var(--s1);color:var(--tp);font-family:'DM Sans',sans-serif;font-size:14px;padding:0 14px;outline:none;transition:border-color 0.2s;}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(255,94,26,0.12);}
+.input::placeholder{color:var(--tm);}
+.add-btn{width:48px;height:48px;border-radius:12px;background:rgba(255,94,26,0.1);border:1px solid rgba(255,94,26,0.3);color:var(--primary);font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.add-btn:hover{background:rgba(255,94,26,0.2);}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.chip{padding:5px 12px;border-radius:100px;font-size:11px;cursor:pointer;background:var(--s2);border:1px solid rgba(255,255,255,0.06);color:var(--tm);transition:all 0.15s;}
+.chip:hover{border-color:rgba(255,94,26,0.3);color:var(--tp);}
+.chip.tag{background:rgba(255,94,26,0.1);border-color:rgba(255,94,26,0.3);color:var(--primary);}
+.chip.tag::after{content:' ×';opacity:0.7;}
+
+.goal-row{display:flex;gap:6px;}
+.goal-btn{flex:1;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:var(--s2);color:var(--tm);font-size:11px;cursor:pointer;transition:all 0.2s;}
+.goal-btn.active{background:rgba(255,94,26,0.1);border-color:var(--primary);color:var(--primary);}
+
+/* Generate btn */
+.gen-btn{width:100%;height:56px;border-radius:16px;border:none;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;color:#fff;background:linear-gradient(135deg,#FF5E1A,#FF8C42);box-shadow:0 0 24px rgba(255,94,26,0.35);transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 0 36px rgba(255,94,26,0.5);}
+.gen-btn:active{transform:scale(0.97);}
+.gen-btn.loading{opacity:0.7;pointer-events:none;}
+
+/* Result */
+.result-card{background:var(--s0);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:16px 18px;animation:fadeIn 0.5s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.recipe-name{font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--tp);margin-bottom:14px;}
+
+/* Macro bar */
+.macro-row{margin-bottom:10px;}
+.macro-top{display:flex;justify-content:space-between;margin-bottom:5px;}
+.macro-label{font-size:11px;color:var(--tm);}
+.macro-val{font-size:11px;font-weight:600;color:var(--tp);}
+.macro-track{height:5px;border-radius:3px;background:var(--s2);overflow:hidden;}
+.macro-fill{height:100%;border-radius:3px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1);}
+
+/* Steps */
+.step-item{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start;}
+.step-num{width:24px;height:24px;border-radius:50%;background:rgba(255,94,26,0.12);border:1px solid rgba(255,94,26,0.2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:12px;color:var(--primary);flex-shrink:0;}
+.step-txt{font-size:13px;color:var(--tp);line-height:1.6;padding-top:2px;}
+
+/* AI insight */
+.insight{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:14px;}
+
+/* Meal scan */
+.viewfinder{position:relative;border-radius:20px;overflow:hidden;background:#0D0D0D;border:1px solid rgba(255,255,255,0.06);height:180px;display:flex;align-items:center;justify-content:center;}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3B82F6,rgba(59,130,246,0.5),transparent);box-shadow:0 0 8px #3B82F6;animation:scanAnim 2.5s ease-in-out infinite;top:0;}
+@keyframes scanAnim{0%,100%{top:0;opacity:0.9}50%{top:calc(100% - 2px);opacity:0.5}}
+.vf-icon{font-size:52px;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+.textarea{width:100%;min-height:72px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.08);background:var(--s1);color:var(--tp);font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;resize:none;transition:border-color 0.2s;}
+.textarea:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.textarea::placeholder{color:var(--tm);}
+
+/* Health score */
+.score-row{display:flex;align-items:center;gap:16px;}
+.score-ring{position:relative;width:80px;height:80px;flex-shrink:0;}
+.score-ring svg{transform:rotate(-90deg);}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:22px;color:#22C55E;}
+
+/* Portion */
+.portion-row{display:flex;gap:6px;}
+.portion-btn{flex:1;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:var(--s2);color:var(--tm);font-size:12px;cursor:pointer;transition:all 0.2s;}
+.portion-btn.active{background:rgba(255,94,26,0.1);border-color:var(--primary);color:var(--primary);}
+
+/* Ingredients detected */
+.ing-detected{display:flex;flex-wrap:wrap;gap:6px;}
+.ing-tag{padding:4px 12px;border-radius:100px;font-size:11px;background:var(--s2);color:var(--tm);}
+
+/* CTA */
+.log-btn{width:100%;height:56px;border-radius:16px;border:none;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;color:#fff;background:linear-gradient(135deg,#22C55E,#16a34a);box-shadow:0 0 20px rgba(34,197,94,0.3);transition:all 0.2s;}
+.log-btn:hover{transform:translateY(-2px);}
+
+/* Bottom nav */
+.bottom-nav{height:72px;background:linear-gradient(to top,#0A0A0A,rgba(10,10,10,0.96));border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:flex-end;justify-content:space-around;padding-bottom:10px;flex-shrink:0;}
+.nav-tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding-top:8px;}
+.nav-tab .ni{font-size:22px;opacity:0.45;}
+.nav-tab .nl{font-family:'Bebas Neue',cursive;font-size:9px;letter-spacing:2px;color:var(--tm);}
+.nav-tab.active .ni{opacity:1;}
+.nav-tab.active .nl{color:var(--primary);}
+.ndot{width:4px;height:4px;border-radius:50%;background:var(--primary);}
+.nav-center{display:flex;flex-direction:column;align-items:center;margin-top:-24px;}
+.nav-center .ncirc{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#FF5E1A,#FF8C42);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 20px rgba(255,94,26,0.5);cursor:pointer;}
+.nav-center .nl{font-family:'Bebas Neue',cursive;font-size:9px;letter-spacing:2px;color:var(--tm);margin-top:3px;}
+
+.nav-pill{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:100;background:rgba(20,20,20,0.9);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:100px;display:flex;align-items:center;gap:8px;padding:8px 16px;font-family:'Bebas Neue',cursive;font-size:12px;letter-spacing:2px;color:var(--tm);}
+.nav-pill a{color:var(--primary);text-decoration:none;}
+</style>
+</head>
+<body>
+<canvas id="aurora"></canvas>
+<div class="nav-pill"><a href="07-evolve.html">← 07</a><span>·</span><span style="color:var(--primary)">08</span><span>NUTRITION</span><span>·</span><a href="index.html">HUB →</a></div>
+
+<div class="phone">
+  <div class="scroll">
+    <div class="header">
+      <p>AI-POWERED</p>
+      <h1>NUTRITION</h1>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('recipe',this)">🍳 RECIPE ENGINE</button>
+      <button class="tab-btn" onclick="switchTab('scan',this)">🔍 MEAL SCAN</button>
+    </div>
+
+    <!-- Recipe Engine -->
+    <div class="pane active" id="pane-recipe">
+      <div class="card">
+        <span class="lbl">INGREDIENTS</span>
+        <div class="ing-row">
+          <input class="input" id="ingInput" placeholder="Add ingredient..." onkeydown="if(event.key==='Enter')addIng()">
+          <button class="add-btn" onclick="addIng()">+</button>
+        </div>
+        <div class="chips" id="quickChips">
+          <span class="chip" onclick="addQuick(this)">Chicken</span>
+          <span class="chip" onclick="addQuick(this)">Rice</span>
+          <span class="chip" onclick="addQuick(this)">Eggs</span>
+          <span class="chip" onclick="addQuick(this)">Spinach</span>
+          <span class="chip" onclick="addQuick(this)">Avocado</span>
+          <span class="chip" onclick="addQuick(this)">Oats</span>
+          <span class="chip" onclick="addQuick(this)">Salmon</span>
+        </div>
+        <div class="chips" id="ingTags"></div>
+      </div>
+      <div class="card">
+        <span class="lbl">GOAL</span>
+        <div class="goal-row">
+          <button class="goal-btn active" onclick="setGoal(this)">Muscle</button>
+          <button class="goal-btn" onclick="setGoal(this)">Fat Loss</button>
+          <button class="goal-btn" onclick="setGoal(this)">Energy</button>
+          <button class="goal-btn" onclick="setGoal(this)">Recovery</button>
+        </div>
+      </div>
+      <button class="gen-btn" id="genBtn" onclick="generateRecipe()"><span>✨</span><span>GENERATE RECIPE</span></button>
+      <div id="recipeResult"></div>
+    </div>
+
+    <!-- Meal Scan -->
+    <div class="pane" id="pane-scan">
+      <div class="viewfinder">
+        <div class="scan-line"></div>
+        <div class="vf-icon">🍽️</div>
+      </div>
+      <div class="card">
+        <span class="lbl">DESCRIBE YOUR MEAL</span>
+        <textarea class="textarea" id="mealDesc" placeholder="e.g. grilled chicken breast with brown rice and steamed broccoli..."></textarea>
+      </div>
+      <button class="gen-btn" id="scanBtn" onclick="scanMeal()" style="background:linear-gradient(135deg,#3B82F6,#1d4ed8);box-shadow:0 0 24px rgba(59,130,246,0.3)"><span>🔍</span><span>SCAN MEAL</span></button>
+      <div id="scanResult"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-tab" onclick="location.href='05-home.html'"><span class="ni">⊞</span><span class="nl">HOME</span></div>
+    <div class="nav-center" onclick="location.href='06-log.html'"><div class="ncirc">📸</div><span class="nl">LOG</span></div>
+    <div class="nav-tab" onclick="location.href='07-evolve.html'"><span class="ni">⭐</span><span class="nl">EVOLVE</span></div>
+    <div class="nav-tab active"><span class="ni">🥗</span><span class="nl">FUEL</span><div class="ndot"></div></div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(t,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+t).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Ingredients
+const tags=[];
+function addIng(){
+  const inp=document.getElementById('ingInput');
+  const v=inp.value.trim();
+  if(v&&!tags.includes(v)){tags.push(v);renderTags();}
+  inp.value='';
+}
+function addQuick(el){
+  const v=el.textContent.trim();
+  if(!tags.includes(v)){tags.push(v);renderTags();}
+}
+function removeTag(v){tags.splice(tags.indexOf(v),1);renderTags();}
+function renderTags(){
+  document.getElementById('ingTags').innerHTML=tags.map(t=>`<span class="chip tag" onclick="removeTag('${t}')">${t}</span>`).join('');
+}
+
+// Goals
+function setGoal(btn){
+  document.querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Macro bar helper
+function macroBar(label,val,max,unit,color){
+  return `<div class="macro-row">
+    <div class="macro-top"><span class="macro-label">${label}</span><span class="macro-val">${val}${unit}</span></div>
+    <div class="macro-track"><div class="macro-fill" style="background:${color}" data-pct="${Math.min(val/max*100,100)}"></div></div>
+  </div>`;
+}
+function animateBars(){
+  setTimeout(()=>{document.querySelectorAll('.macro-fill').forEach(f=>{f.style.width=f.dataset.pct+'%';});},100);
+}
+
+// Generate recipe (demo data)
+function generateRecipe(){
+  if(!tags.length){alert('Add at least one ingredient first!');return;}
+  const btn=document.getElementById('genBtn');
+  btn.classList.add('loading');btn.querySelector('span:last-child').textContent='GENERATING...';
+  setTimeout(()=>{
+    btn.classList.remove('loading');btn.querySelector('span:last-child').textContent='GENERATE RECIPE';
+    const goal=document.querySelector('.goal-btn.active').textContent;
+    const recipes={
+      'Muscle':{name:'POWER PROTEIN BOWL',kcal:480,protein:42,carbs:38,fat:14,steps:['Season and grill the protein until cooked through','Cook rice or grains as the base','Combine all ingredients in a bowl with seasoning','Top with greens and healthy fats'],insight:'High protein meal ideal for muscle synthesis post-workout.'},
+      'Fat Loss':{name:'LEAN FIRE SALAD',kcal:320,protein:35,carbs:18,fat:10,steps:['Prepare a bed of mixed greens','Add lean protein source','Dress with lemon and olive oil','Season with herbs and spices'],insight:'Low-calorie, high-protein meal to support fat loss while preserving muscle.'},
+      'Energy':{name:'ENERGY SURGE BOWL',kcal:520,protein:28,carbs:72,fat:12,steps:['Cook complex carbs for sustained energy','Add moderate protein source','Include colorful vegetables','Drizzle with olive oil'],insight:'Carb-rich meal for sustained energy during long training sessions.'},
+      'Recovery':{name:'RECOVERY FUSION',kcal:440,protein:38,carbs:45,fat:11,steps:['Prepare anti-inflammatory base','Add high-quality protein','Include omega-3 rich ingredients','Finish with antioxidant-rich garnish'],insight:'Anti-inflammatory ingredients to accelerate muscle recovery and reduce soreness.'},
+    };
+    const r=recipes[goal]||recipes['Muscle'];
+    document.getElementById('recipeResult').innerHTML=`
+      <div class="result-card">
+        <div class="recipe-name">${r.name}</div>
+        ${macroBar('Calories',r.kcal,800,'kcal','#FF5E1A')}
+        ${macroBar('Protein',r.protein,80,'g','#22C55E')}
+        ${macroBar('Carbs',r.carbs,100,'g','#3B82F6')}
+        ${macroBar('Fat',r.fat,50,'g','#EAB308')}
+      </div>
+      <div class="result-card">
+        <span class="lbl">STEPS</span>
+        ${r.steps.map((s,i)=>`<div class="step-item"><div class="step-num">${i+1}</div><div class="step-txt">${s}</div></div>`).join('')}
+      </div>
+      <div class="insight"><span style="font-size:20px">🧠</span><p style="font-size:12px;color:var(--tm);line-height:1.6">${r.insight}</p></div>`;
+    animateBars();
+  },1800);
+}
+
+// Scan meal (demo data)
+let portion='Medium';
+function scanMeal(){
+  const desc=document.getElementById('mealDesc').value.trim();
+  if(!desc){alert('Describe your meal first!');return;}
+  const btn=document.getElementById('scanBtn');
+  btn.classList.add('loading');btn.querySelector('span:last-child').textContent='SCANNING...';
+  setTimeout(()=>{
+    btn.classList.remove('loading');btn.querySelector('span:last-child').textContent='SCAN MEAL';
+    renderScanResult({name:'Analyzed Meal',score:74,kcal:520,protein:28,carbs:60,fat:18,ingredients:['chicken breast','brown rice','broccoli','olive oil']});
+  },2000);
+}
+function renderScanResult(d){
+  const mult=portion==='Small'?0.7:portion==='Large'?1.3:1;
+  const circ=2*Math.PI*32;
+  const offset=circ*(1-d.score/100);
+  document.getElementById('scanResult').innerHTML=`
+    <div class="result-card">
+      <div class="score-row">
+        <div class="score-ring">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="32" stroke="#242424" stroke-width="6" fill="none"/>
+            <circle cx="40" cy="40" r="32" stroke="#22C55E" stroke-width="6" fill="none"
+              stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+              id="scoreCircle"/>
+          </svg>
+          <div class="score-num">${d.score}</div>
+        </div>
+        <div><div style="font-family:'Bebas Neue',cursive;font-size:20px;color:var(--tp)">HEALTH SCORE</div><div style="font-size:12px;color:var(--tm)">Good balance of nutrients</div></div>
+      </div>
+    </div>
+    <div class="result-card">
+      <span class="lbl">PORTION SIZE</span>
+      <div class="portion-row">
+        <button class="portion-btn ${portion==='Small'?'active':''}" onclick="setPortion('Small')">Small</button>
+        <button class="portion-btn ${portion==='Medium'?'active':''}" onclick="setPortion('Medium')">Medium</button>
+        <button class="portion-btn ${portion==='Large'?'active':''}" onclick="setPortion('Large')">Large</button>
+      </div>
+    </div>
+    <div class="result-card">
+      ${macroBar('Calories',Math.round(d.kcal*mult),800,'kcal','#FF5E1A')}
+      ${macroBar('Protein',Math.round(d.protein*mult),80,'g','#22C55E')}
+      ${macroBar('Carbs',Math.round(d.carbs*mult),100,'g','#3B82F6')}
+      ${macroBar('Fat',Math.round(d.fat*mult),50,'g','#EAB308')}
+    </div>
+    <div class="result-card">
+      <span class="lbl">DETECTED INGREDIENTS</span>
+      <div class="ing-detected">${d.ingredients.map(i=>`<span class="ing-tag">${i}</span>`).join('')}</div>
+    </div>
+    <button class="log-btn">LOG THIS MEAL</button>`;
+  animateBars();
+  setTimeout(()=>{const c=document.getElementById('scoreCircle');if(c)c.style.transition='stroke-dashoffset 1.2s ease';if(c)c.style.strokeDashoffset=offset;},150);
+  window._lastScan=d;
+}
+function setPortion(p){portion=p;if(window._lastScan)renderScanResult(window._lastScan);}
+
+const canvas=document.getElementById('aurora'),ctx=canvas.getContext('2d');
+let W,H;const resize=()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight;};resize();window.addEventListener('resize',resize);
+const blobs=[{x:0.2,y:0.3,dx:0.0001,dy:0.0002,r:0.4,c:'#3B82F6'},{x:0.8,y:0.7,dx:-0.0001,dy:0.0001,r:0.35,c:'#FF5E1A'}];
+(function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#0A0A0A';ctx.fillRect(0,0,W,H);blobs.forEach(b=>{b.x+=b.dx;b.y+=b.dy;if(b.x<0||b.x>1)b.dx*=-1;if(b.y<0||b.y>1)b.dy*=-1;const g=ctx.createRadialGradient(b.x*W,b.y*H,0,b.x*W,b.y*H,b.r*Math.max(W,H));g.addColorStop(0,b.c+'18');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);});requestAnimationFrame(draw);})();
+</script>
+</body>
+</html>
