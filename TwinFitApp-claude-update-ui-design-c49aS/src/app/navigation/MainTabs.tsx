@@ -4,6 +4,7 @@ import { HomeScreen } from "../screens/home/HomeScreen";
 import { LogScreen } from "../screens/home/LogScreen";
 import { EvolveScreen } from "../screens/evolve/EvolveScreen";
 import { NutritionScreen } from "../screens/nutrition/NutritionScreen";
+import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { StyledTabBar } from "./StyledTabBar";
 
 export type MainTabsParamList = {
@@ -11,6 +12,7 @@ export type MainTabsParamList = {
   Log: undefined;
   Evolve: undefined;
   Nutrition: undefined;
+  Profile: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -25,6 +27,7 @@ export const MainTabs = () => {
       <Tab.Screen name="Log" component={LogScreen} />
       <Tab.Screen name="Evolve" component={EvolveScreen} />
       <Tab.Screen name="Nutrition" component={NutritionScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 };

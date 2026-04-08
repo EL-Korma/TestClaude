@@ -13,6 +13,7 @@ const TAB_CONFIG: Record<string, TabInfo> = {
   Log: { icon: "📸", label: "LOG" },
   Evolve: { icon: "⭐", label: "EVOLVE" },
   Nutrition: { icon: "🥗", label: "FUEL" },
+  Profile: { icon: "👤", label: "ME" },
 };
 
 export const StyledTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {

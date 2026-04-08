@@ -11,6 +11,9 @@ import {
 import { View, ActivityIndicator } from "react-native";
 import { RootNavigator } from "./src/app/navigation/RootNavigator";
 import { colors } from "./src/theme/tokens";
+import { ClickSpark } from "./src/components/primitives/ClickSpark";
+import { DumbbellProvider } from "./src/store/DumbbellStore";
+import { AuthProvider } from "./src/store/AuthStore";
 
 const App = () => {
   const [fontsLoaded] = useFonts({
@@ -29,12 +32,18 @@ const App = () => {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="light" backgroundColor={colors.bg} />
-        <RootNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <AuthProvider>
+      <DumbbellProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar style="light" backgroundColor={colors.bg} />
+            <ClickSpark sparkColor="#FF5E1A" sparkCount={8} sparkRadius={44} sparkSize={4} duration={480}>
+              <RootNavigator />
+            </ClickSpark>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </DumbbellProvider>
+    </AuthProvider>
   );
 };
 

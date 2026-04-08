@@ -1,5 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +18,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
+import { useAuth } from "../../../store/AuthStore";
+import { apiFetch } from "../../../services/api";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "Auth">;
 
@@ -60,6 +64,7 @@ const InputField = ({
 
 export const SignUpScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { register, loading, error, clearError } = useAuth();
   const [step, setStep] = useState(1);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -75,15 +80,60 @@ export const SignUpScreen = () => {
   const [myCode] = useState(generateCode());
   const [partnerCode, setPartnerCode] = useState("");
 
+  const advance = () => {
+    Animated.sequence([
+      Animated.timing(slideAnim, { toValue: -20, duration: 120, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start();
+    setStep((s) => s + 1);
+  };
+
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      Alert.alert("Invalid fields", "Please fill in name, email, and a password with at least 8 characters.");
+      return;
+    }
+    const parts = name.trim().split(" ");
+    const firstName = parts[0];
+    const surname = parts.slice(1).join(" ") || "User";
+    const username = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") + Math.floor(Math.random() * 1000);
+
+    const ok = await register({
+      name: firstName,
+      surname,
+      username,
+      email: email.trim().toLowerCase(),
+      password,
+      age,
+    });
+    if (!ok) {
+      if (error) Alert.alert("Registration Failed", error, [{ text: "OK", onPress: clearError }]);
+      return;
+    }
+
+    // If partner code entered, try to join the group
+    if (partnerCode.length === 6) {
+      try {
+        await apiFetch("/groups/join", { method: "POST", body: { inviteCode: partnerCode } });
+      } catch {
+        // Non-fatal — user can link later from settings
+      }
+    }
+
+    navigation.navigate("ModeSelect");
+  };
+
   const goNext = () => {
+    if (step === 1) {
+      if (!name.trim() || !email.trim() || password.length < 8) {
+        Alert.alert("Invalid fields", "Fill in name, email, and a password (min 8 chars).");
+        return;
+      }
+    }
     if (step < TOTAL_STEPS) {
-      Animated.sequence([
-        Animated.timing(slideAnim, { toValue: -20, duration: 120, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      ]).start();
-      setStep((s) => s + 1);
+      advance();
     } else {
-      navigation.navigate("ModeSelect");
+      handleRegister();
     }
   };
 
@@ -215,11 +265,11 @@ export const SignUpScreen = () => {
             </View>
 
             {partnerCode.length === 6 && (
-              <Pressable style={[styles.nextBtn, { marginTop: 20 }]} onPress={() => navigation.navigate("ModeSelect")}>
+              <Pressable style={[styles.nextBtn, { marginTop: 20 }, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading}>
                 <LinearGradient colors={["#FF5E1A", "#FF7A3A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnGradient}>
-                  <Text style={styles.nextBtnText}>
-                    CONNECT WITH {name.split(" ")[0]?.toUpperCase() || "PARTNER"}
-                  </Text>
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.nextBtnText}>CONNECT WITH {name.split(" ")[0]?.toUpperCase() || "PARTNER"}</Text>}
                 </LinearGradient>
               </Pressable>
             )}
@@ -268,9 +318,11 @@ export const SignUpScreen = () => {
 
           {step !== 5 && (
             <View style={styles.nextBtnWrap}>
-              <Pressable style={styles.nextBtn} onPress={goNext}>
+              <Pressable style={[styles.nextBtn, loading && { opacity: 0.7 }]} onPress={goNext} disabled={loading}>
                 <LinearGradient colors={["#FF5E1A", "#FF7A3A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnGradient}>
-                  <Text style={styles.nextBtnText}>{step === 4 ? "ALMOST DONE →" : "NEXT →"}</Text>
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.nextBtnText}>{step === 4 ? "ALMOST DONE →" : "NEXT →"}</Text>}
                 </LinearGradient>
               </Pressable>
             </View>
@@ -278,8 +330,10 @@ export const SignUpScreen = () => {
 
           {step === 5 && partnerCode.length < 6 && (
             <View style={styles.nextBtnWrap}>
-              <Pressable style={styles.skipBtn} onPress={() => navigation.navigate("ModeSelect")}>
-                <Text style={styles.skipText}>Skip for now →</Text>
+              <Pressable style={styles.skipBtn} onPress={handleRegister} disabled={loading}>
+                {loading
+                  ? <ActivityIndicator color={colors.textMuted} />
+                  : <Text style={styles.skipText}>Skip for now →</Text>}
               </Pressable>
             </View>
           )}

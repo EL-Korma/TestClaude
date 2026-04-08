@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -7,19 +7,26 @@ import {
   Text,
   View,
 } from "react-native";
+import { Counter, StreakLoseBanner } from "../../../components";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { MainTabsParamList } from "../../navigation/MainTabs";
+import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
+import { useDumbbells } from "../../../store/DumbbellStore";
+import { useAuth } from "../../../store/AuthStore";
+import { streaksApi, type StreakData } from "../../../services/api";
 
-type Nav = BottomTabNavigationProp<MainTabsParamList, "Home">;
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabsParamList, "Home">,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-// 0 = empty, 1 = done, 2 = today
-const STREAK_DATA = [1, 1, 1, 1, 1, 2, 0];
-const STREAK_DAYS = 14;
 
 const LOCKED_CARDS = [
   { emoji: "🥈", label: "Silver Pose", hint: "6 sessions away" },
@@ -29,9 +36,38 @@ const LOCKED_CARDS = [
 
 export const HomeScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { state } = useDumbbells();
+  const { user, token } = useAuth();
+  const firstName = user?.name ?? "Athlete";
   const flameScale = useRef(new Animated.Value(1)).current;
   const streakGlow = useRef(new Animated.Value(0.4)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const [streak, setStreak] = useState<StreakData | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Fetch streak when authenticated
+  useEffect(() => {
+    if (token) {
+      streaksApi.me().then((s) => { if (s) setStreak(s); }).catch(() => {});
+    }
+  }, [token]);
+
+  const streakDays = streak?.current ?? 0;
+  const lastLog = streak?.lastLogDate ? new Date(streak.lastLogDate) : null;
+  const hoursAgo = lastLog ? (Date.now() - lastLog.getTime()) / 3600000 : 0;
+  const hoursLeft = Math.max(0, 24 - hoursAgo);
+  const showStreakBanner = !bannerDismissed && streakDays > 0 && hoursLeft <= 4;
+
+  // Build 7-day pip data: 0=empty, 1=done, 2=today
+  const todayDow = new Date().getDay(); // 0=Sun
+  const weeklyCount = streak?.weeklyCount ?? 0;
+  const streakData = DAYS.map((_, i) => {
+    const dow = (i + 1) % 7; // M=1, T=2, ... S=6, S=0
+    if (dow === todayDow) return 2; // today
+    const daysSinceToday = (todayDow - dow + 7) % 7;
+    return daysSinceToday < weeklyCount ? 1 : 0;
+  });
 
   useEffect(() => {
     Animated.loop(
@@ -67,7 +103,7 @@ export const HomeScreen = () => {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.greeting}>Good morning 👋</Text>
-              <Text style={styles.duoNames}>Karim & Aya</Text>
+              <Text style={styles.duoNames}>{firstName}</Text>
             </View>
             <View style={styles.avatarRow}>
               <View style={styles.avatarBubble}>
@@ -78,6 +114,30 @@ export const HomeScreen = () => {
               </View>
             </View>
           </View>
+
+          {/* ── Streak lose banner ────────────────────────────────── */}
+          {showStreakBanner && (
+            <StreakLoseBanner
+              streakDays={streakDays}
+              hoursRemaining={Math.round(hoursLeft)}
+              onLogNow={() => { setBannerDismissed(true); navigation.navigate("Log"); }}
+              onDismiss={() => setBannerDismissed(true)}
+            />
+          )}
+
+          {/* ── Dumbbell balance widget ───────────────────────────── */}
+          <Pressable style={styles.dumbbellWidget} onPress={() => navigation.navigate("Quests")}>
+            <LinearGradient colors={["#1C1008", "#141414"]} style={styles.dumbbellWidgetInner}>
+              <Text style={styles.dumbbellWidgetIcon}>🏋️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dumbbellWidgetLabel}>DUMBBELLS</Text>
+                <Counter value={state.balance} fontSize={20} color={colors.primary} fontFamily={typography.displayFont} />
+              </View>
+              <Pressable style={styles.questsBtn} onPress={() => navigation.navigate("Quests")}>
+                <Text style={styles.questsBtnText}>QUESTS →</Text>
+              </Pressable>
+            </LinearGradient>
+          </Pressable>
 
           {/* ── Streak hero card ───────────────────────────────────── */}
           <Animated.View style={{ opacity: streakGlow }}>
@@ -93,7 +153,12 @@ export const HomeScreen = () => {
                 <Animated.Text style={[styles.streakNumber, { transform: [{ scale: flameScale }] }]}>
                   🔥
                 </Animated.Text>
-                <Text style={styles.streakBigNum}>{STREAK_DAYS}</Text>
+                <Counter
+                  value={streakDays}
+                  fontSize={72}
+                  color={colors.primary}
+                  fontFamily={typography.displayFont}
+                />
                 <Text style={styles.streakLabel}>DAYS{"\n"}IN A ROW</Text>
               </View>
 
@@ -107,7 +172,7 @@ export const HomeScreen = () => {
                     <View style={styles.checkBadge}>
                       <Text style={styles.checkIcon}>✓</Text>
                     </View>
-                    <Text style={styles.duoName}>Karim</Text>
+                    <Text style={styles.duoName}>{firstName}</Text>
                   </View>
 
                   <View style={styles.duoConnector}>
@@ -135,16 +200,16 @@ export const HomeScreen = () => {
             <View style={styles.weekStrip}>
               {DAYS.map((day, i) => (
                 <View key={i} style={styles.dayCol}>
-                  <Text style={[styles.dayLabel, STREAK_DATA[i] > 0 && styles.dayLabelActive]}>{day}</Text>
+                  <Text style={[styles.dayLabel, streakData[i] > 0 && styles.dayLabelActive]}>{day}</Text>
                   <View
                     style={[
                       styles.dayPip,
-                      STREAK_DATA[i] === 1 && styles.dayPipDone,
-                      STREAK_DATA[i] === 2 && styles.dayPipToday,
+                      streakData[i] === 1 && styles.dayPipDone,
+                      streakData[i] === 2 && styles.dayPipToday,
                     ]}
                   >
-                    {STREAK_DATA[i] > 0 && (
-                      <Text style={{ fontSize: STREAK_DATA[i] === 2 ? 14 : 10 }}>🔥</Text>
+                    {streakData[i] > 0 && (
+                      <Text style={{ fontSize: streakData[i] === 2 ? 14 : 10 }}>🔥</Text>
                     )}
                   </View>
                 </View>
@@ -332,6 +397,14 @@ const styles = StyleSheet.create({
   poseDesc: { fontFamily: typography.bodyFont, fontSize: 13, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
   poseCtaRow: { flexDirection: "row" },
   poseCta: { fontFamily: typography.displayFont, fontSize: 13, letterSpacing: 1.5, color: colors.primary },
+
+  // Dumbbell widget
+  dumbbellWidget: { borderRadius: radii.xl, overflow: "hidden", marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,94,26,0.35)" },
+  dumbbellWidgetInner: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  dumbbellWidgetIcon: { fontSize: 26 },
+  dumbbellWidgetLabel: { fontFamily: typography.displayFont, fontSize: 10, letterSpacing: 2, color: colors.textDim, marginBottom: 2 },
+  questsBtn: { backgroundColor: colors.primary, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 7 },
+  questsBtnText: { fontFamily: typography.displayFont, fontSize: 11, letterSpacing: 1, color: "#FFF" },
 
   // Locked cards
   lockedScroll: { gap: 12, paddingRight: 20 },

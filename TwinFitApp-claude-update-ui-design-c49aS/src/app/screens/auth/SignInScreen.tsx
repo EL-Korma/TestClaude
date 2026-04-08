@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,15 +17,30 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
+import { useAuth } from "../../../store/AuthStore";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "Auth">;
 
 export const SignInScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { login, loading, error, clearError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
+
+  const handleSignIn = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert("Missing fields", "Please enter your email and password.");
+      return;
+    }
+    const ok = await login(email.trim().toLowerCase(), password);
+    if (ok) {
+      navigation.navigate("Main");
+    } else if (error) {
+      Alert.alert("Sign In Failed", error, [{ text: "OK", onPress: clearError }]);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -106,8 +123,9 @@ export const SignInScreen = () => {
 
               {/* Sign In CTA */}
               <Pressable
-                style={styles.signInBtn}
-                onPress={() => navigation.navigate("Main")}
+                style={[styles.signInBtn, loading && { opacity: 0.7 }]}
+                onPress={handleSignIn}
+                disabled={loading}
               >
                 <LinearGradient
                   colors={["#FF5E1A", "#FF7A3A"]}
@@ -115,7 +133,9 @@ export const SignInScreen = () => {
                   end={{ x: 1, y: 0 }}
                   style={styles.signInBtnGradient}
                 >
-                  <Text style={styles.signInBtnText}>SIGN IN</Text>
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.signInBtnText}>SIGN IN</Text>}
                 </LinearGradient>
               </Pressable>
 

@@ -1,88 +1,42 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// TwinFit Prisma Schema — SQLite (local dev)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
-}
+// ─── Enums (stored as String in SQLite) ──────────────────────────────────────
 
-enum Objective {
-  BULKING
-  SLIMMING
-  MAINTENANCE
-  WELLNESS
-}
+// Gender: MALE | FEMALE | OTHER
+// Objective: BULKING | SLIMMING | MAINTENANCE | WELLNESS
+// DietType: ANTI_INFLAMMATORY | BALANCED | HIGH_PROTEIN | NONE
+// GymFrequency: ONE_TO_TWO | THREE_TO_FIVE | SIX_PLUS
+// GroupMode: COUPLE | BESTIES | SQUAD | DUO
+// MembershipStatus: INVITED | ACTIVE | LEFT
+// CheckInStatus: PENDING | VALIDATED | REJECTED
+// BadgeCategory: EXPLORATION | ENGAGEMENT | CONSISTENCY | SOCIAL
+// NotificationType: STREAK | CHECKIN | MEAL | SOCIAL | SYSTEM | QUEST | DUMBBELL
+// QuestFrequency: DAILY | WEEKLY | MONTHLY
+// BorderRarity: COMMON | RARE | LEGENDARY | MYTHIC
 
-enum DietType {
-  ANTI_INFLAMMATORY
-  BALANCED
-  HIGH_PROTEIN
-  NONE
-}
-
-enum GymFrequency {
-  ONE_TO_TWO
-  THREE_TO_FIVE
-  SIX_PLUS
-}
-
-enum GroupMode {
-  COUPLE
-  BESTIES
-  SQUAD
-}
-
-enum MembershipStatus {
-  INVITED
-  ACTIVE
-  LEFT
-}
-
-enum CheckInStatus {
-  PENDING
-  VALIDATED
-  REJECTED
-}
-
-enum BadgeCategory {
-  EXPLORATION
-  ENGAGEMENT
-  CONSISTENCY
-  SOCIAL
-}
-
-enum NotificationType {
-  STREAK
-  CHECKIN
-  MEAL
-  SOCIAL
-  SYSTEM
-}
+// ─── Core models ──────────────────────────────────────────────────────────────
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  phone         String?        @unique
-  username      String         @unique
+  id            String   @id @default(cuid())
+  email         String   @unique
+  phone         String?  @unique
+  username      String   @unique
   name          String
   surname       String
   age           Int?
-  gender        Gender?
+  gender        String?
   passwordHash  String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   profile       Profile?
   groups        GroupMember[]
@@ -92,31 +46,38 @@ model User {
   mealScans     MealScan[]
   recipes       Recipe[]
   notifications Notification[]
+  wallet        DumbbellWallet?
+  questProgress UserQuestProgress[]
+  ownedBorders  UserBorder[]
+  xpBoosts      XpBoost[]
+  transactions  DumbbellTransaction[]
 }
 
 model Profile {
-  id             String        @id @default(cuid())
-  userId         String        @unique
+  id             String   @id @default(cuid())
+  userId         String   @unique
   avatarUrl      String?
-  avatarType     String?       @default("avatar")
+  avatarEmoji    String?  @default("🦁")
+  avatarType     String?  @default("emoji")
   bio            String?
   heightCm       Int?
   weightKg       Int?
-  gymFrequency   GymFrequency?
-  objective      Objective?
-  dietType       DietType?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  gymFrequency   String?
+  objective      String?
+  dietType       String?
+  activeBorderId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user           User          @relation(fields: [userId], references: [id])
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Group {
-  id         String         @id @default(cuid())
+  id         String      @id @default(cuid())
   name       String
-  mode       GroupMode
-  inviteCode String         @unique
-  createdAt  DateTime       @default(now())
+  mode       String      @default("DUO")
+  inviteCode String      @unique
+  createdAt  DateTime    @default(now())
 
   members    GroupMember[]
   checkIns   CheckIn[]
@@ -124,48 +85,50 @@ model Group {
 }
 
 model GroupMember {
-  id        String           @id @default(cuid())
+  id        String    @id @default(cuid())
   groupId   String
   userId    String
-  status    MembershipStatus @default(INVITED)
+  status    String    @default("INVITED")
   joinedAt  DateTime?
 
-  group     Group            @relation(fields: [groupId], references: [id])
-  user      User             @relation(fields: [userId], references: [id])
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
 }
 
 model CheckIn {
-  id         String        @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
-  groupId    String
+  groupId    String?
   photoUrl   String
-  status     CheckInStatus @default(PENDING)
+  status     String   @default("PENDING")
   capturedAt DateTime
-  createdAt  DateTime      @default(now())
+  createdAt  DateTime @default(now())
 
-  user       User          @relation(fields: [userId], references: [id])
-  group      Group         @relation(fields: [groupId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group      Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model Streak {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String?
   groupId     String?
-  current     Int      @default(0)
-  weeklyCount Int      @default(0)
-  level       Int      @default(1)
-  updatedAt   DateTime @updatedAt
+  current     Int       @default(0)
+  longest     Int       @default(0)
+  weeklyCount Int       @default(0)
+  level       Int       @default(1)
+  lastLogDate DateTime?
+  updatedAt   DateTime  @updatedAt
 
-  user        User?    @relation(fields: [userId], references: [id])
-  group       Group?   @relation(fields: [groupId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model Badge {
-  id          String        @id @default(cuid())
-  code        String        @unique
-  category    BadgeCategory
+  id          String      @id @default(cuid())
+  code        String      @unique
+  category    String
   title       String
   description String?
   icon        String?
@@ -179,45 +142,143 @@ model UserBadge {
   badgeId   String
   awardedAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge     Badge    @relation(fields: [badgeId], references: [id])
 
   @@unique([userId, badgeId])
 }
 
 model MealScan {
-  id           String   @id @default(cuid())
-  userId       String
-  imageUrl     String
-  summary      String
-  proteinScore Int
-  carbsScore   Int
-  fibersScore  Int
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  description String
+  photoUrl    String?
+  calories    Int      @default(0)
+  protein     Int      @default(0)
+  carbs       Int      @default(0)
+  fat         Int      @default(0)
+  healthScore Int?
+  scannedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
 
-  user         User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Recipe {
   id          String   @id @default(cuid())
   userId      String
-  title       String
-  steps       String[]
-  ingredients String[]
+  name        String
+  ingredients String   // JSON array stored as text
+  steps       String   // JSON array stored as text
+  calories    Int      @default(0)
+  protein     Int      @default(0)
+  carbs       Int      @default(0)
+  fat         Int      @default(0)
+  goal        String?
   saved       Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
-  id        String           @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
-  type      NotificationType
+  type      String
   title     String
   body      String?
   readAt    DateTime?
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
-  user      User             @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Dumbbell Economy ─────────────────────────────────────────────────────────
+
+model DumbbellWallet {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  balance     Int      @default(0)
+  totalEarned Int      @default(0)
+  xp          Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DumbbellTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  amount       Int
+  reason       String
+  balanceAfter Int
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String
+  reward      Int
+  xpReward    Int
+  frequency   String
+  icon        String
+
+  progress    UserQuestProgress[]
+}
+
+model UserQuestProgress {
+  id        String    @id @default(cuid())
+  userId    String
+  questId   String
+  periodKey String
+  progress  Float     @default(0)
+  completed Boolean   @default(false)
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest     Quest     @relation(fields: [questId], references: [id])
+
+  @@unique([userId, questId, periodKey])
+}
+
+model Border {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  description String
+  cost        Int
+  rarity      String
+  color       String
+  color2      String?
+  icon        String
+
+  owners      UserBorder[]
+}
+
+model UserBorder {
+  id          String   @id @default(cuid())
+  userId      String
+  borderId    String
+  purchasedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  border      Border   @relation(fields: [borderId], references: [id])
+
+  @@unique([userId, borderId])
+}
+
+model XpBoost {
+  id         String   @id @default(cuid())
+  userId     String
+  multiplier Float
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

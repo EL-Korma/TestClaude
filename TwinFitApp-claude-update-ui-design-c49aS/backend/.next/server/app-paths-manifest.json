@@ -1,0 +1,9 @@
+{
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/groups/join/route": "app/api/groups/join/route.js",
+  "/api/wallet/route": "app/api/wallet/route.js",
+  "/api/streaks/me/route": "app/api/streaks/me/route.js",
+  "/api/quests/route": "app/api/quests/route.js",
+  "/api/shop/borders/route": "app/api/shop/borders/route.js",
+  "/api/checkins/me/route": "app/api/checkins/me/route.js"
+}

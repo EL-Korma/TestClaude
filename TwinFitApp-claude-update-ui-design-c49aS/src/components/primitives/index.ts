@@ -14,3 +14,7 @@ export * from "./StreakBorder";
 export * from "./BadgeIcon";
 export * from "./ListRow";
 export * from "./ModalSheet";
+export * from "./ClickSpark";
+export * from "./Counter";
+export * from "./DumbbellIcon";
+export * from "./StreakLoseBanner";

@@ -1,6 +1,8 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
+  ActivityIndicator,
   Animated,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,21 +12,52 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
+import { checkInsApi, streaksApi, StreakData } from "../../../services/api";
+import { useAuth } from "../../../store/AuthStore";
 
 const { width } = Dimensions.get("window");
 
-const SESSIONS = 14;
 const BRONZE_TARGET = 20;
 const SILVER_TARGET = 40;
 
 export const EvolveScreen = () => {
+  const { token, user } = useAuth();
+  const [sessions, setSessions] = useState(0);
+  const [streak, setStreak] = useState<StreakData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
   const bronzeFloat = useRef(new Animated.Value(0)).current;
   const silverFloat = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0.4)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  const loadData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [checkins, streakData] = await Promise.all([
+        checkInsApi.mine().catch(() => []),
+        streaksApi.me().catch(() => null),
+      ]);
+      setSessions(checkins.length);
+      setStreak(streakData);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
-    Animated.timing(progressAnim, { toValue: SESSIONS / BRONZE_TARGET, duration: 1200, delay: 300, useNativeDriver: false }).start();
+    Animated.timing(progressAnim, { toValue: sessions / BRONZE_TARGET, duration: 1200, delay: 300, useNativeDriver: false }).start();
 
     Animated.loop(
       Animated.sequence([
@@ -46,14 +79,22 @@ export const EvolveScreen = () => {
         Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
-  }, []);
+  }, [sessions]);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
-  const bronzePct = Math.round((SESSIONS / BRONZE_TARGET) * 100);
+  const bronzePct = Math.min(100, Math.round((sessions / BRONZE_TARGET) * 100));
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -61,12 +102,15 @@ export const EvolveScreen = () => {
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
         >
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.screenTitle}>EVOLUTION</Text>
             <View style={styles.sessionBadge}>
-              <Text style={styles.sessionBadgeText}>{SESSIONS} sessions</Text>
+              <Text style={styles.sessionBadgeText}>{sessions} sessions</Text>
             </View>
           </View>
 
@@ -77,7 +121,7 @@ export const EvolveScreen = () => {
           >
             <View style={styles.collectibleHeader}>
               <Text style={styles.collectibleEra}>🥉 BRONZE ERA</Text>
-              <Text style={styles.collectibleSessions}>{SESSIONS} sessions</Text>
+              <Text style={styles.collectibleSessions}>{sessions} sessions</Text>
             </View>
 
             <View style={styles.poseFramesRow}>
@@ -86,7 +130,7 @@ export const EvolveScreen = () => {
                   <Text style={{ fontSize: 52 }}>🦁</Text>
                   <View style={styles.poseFrameBronzeBorder} />
                 </LinearGradient>
-                <Text style={styles.poseFrameName}>Karim</Text>
+                <Text style={styles.poseFrameName}>{user?.name ?? "You"}</Text>
               </View>
 
               <View style={styles.poseVS}>
@@ -131,7 +175,7 @@ export const EvolveScreen = () => {
                   <Text style={styles.nodeActiveBadgeText}>ACTIVE</Text>
                 </View>
                 <Text style={styles.nodeName}>Bronze Era</Text>
-                <Text style={styles.nodeDetail}>{SESSIONS}/{BRONZE_TARGET} sessions</Text>
+                <Text style={styles.nodeDetail}>{sessions}/{BRONZE_TARGET} sessions</Text>
                 <View style={styles.nodeProgressBar}>
                   <Animated.View style={[styles.nodeProgressFill, styles.nodeProgressBronze, { width: progressWidth as any }]} />
                 </View>
@@ -150,11 +194,11 @@ export const EvolveScreen = () => {
               </View>
               <View style={styles.pathNodeRight}>
                 <Text style={styles.nodeName}>Silver Era</Text>
-                <Text style={styles.nodeDetail}>{SILVER_TARGET - SESSIONS} sessions away</Text>
+                <Text style={styles.nodeDetail}>{Math.max(0, SILVER_TARGET - sessions)} sessions away</Text>
                 <View style={styles.nodeProgressBar}>
-                  <View style={[styles.nodeProgressFill, styles.nodeProgressSilver, { width: `${Math.round((SESSIONS / SILVER_TARGET) * 100)}%` as any }]} />
+                  <View style={[styles.nodeProgressFill, styles.nodeProgressSilver, { width: `${Math.min(100, Math.round((sessions / SILVER_TARGET) * 100))}%` as any }]} />
                 </View>
-                <Text style={styles.nodeProgressLabel}>{Math.round((SESSIONS / SILVER_TARGET) * 100)}% complete</Text>
+                <Text style={styles.nodeProgressLabel}>{Math.min(100, Math.round((sessions / SILVER_TARGET) * 100))}% complete</Text>
               </View>
             </View>
 
@@ -197,13 +241,33 @@ export const EvolveScreen = () => {
             </View>
           </View>
 
+          {/* Streak stats */}
+          {streak && (
+            <View style={styles.streakRow}>
+              <View style={styles.streakItem}>
+                <Text style={styles.streakValue}>{streak.current}🔥</Text>
+                <Text style={styles.streakLabel}>Current streak</Text>
+              </View>
+              <View style={styles.streakDivider} />
+              <View style={styles.streakItem}>
+                <Text style={styles.streakValue}>{streak.longest}</Text>
+                <Text style={styles.streakLabel}>Best streak</Text>
+              </View>
+              <View style={styles.streakDivider} />
+              <View style={styles.streakItem}>
+                <Text style={styles.streakValue}>{streak.weeklyCount}</Text>
+                <Text style={styles.streakLabel}>This week</Text>
+              </View>
+            </View>
+          )}
+
           {/* Motivation footer */}
           <View style={styles.motivationCard}>
             <Text style={styles.motivationEmoji}>💪</Text>
             <View>
               <Text style={styles.motivationTitle}>Keep pushing!</Text>
               <Text style={styles.motivationText}>
-                {BRONZE_TARGET - SESSIONS} more sessions to reach Silver Era
+                {Math.max(0, BRONZE_TARGET - sessions)} more sessions to reach Silver Era
               </Text>
             </View>
           </View>
@@ -297,6 +361,33 @@ const styles = StyleSheet.create({
   nodeProgressBronze: { backgroundColor: "#CD7F32" },
   nodeProgressSilver: { backgroundColor: "#C0C0C0" },
   nodeProgressLabel: { fontFamily: typography.bodyFont, fontSize: 11, color: colors.textDim },
+
+  // Streak stats
+  streakRow: {
+    flexDirection: "row",
+    backgroundColor: colors.surface0,
+    borderRadius: radii.xl,
+    padding: 18,
+    marginTop: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.surface2,
+    justifyContent: "space-around",
+  },
+  streakItem: { alignItems: "center", flex: 1 },
+  streakValue: {
+    fontFamily: typography.displayFont,
+    fontSize: 22,
+    letterSpacing: 1,
+    color: colors.textPrimary,
+  },
+  streakLabel: {
+    fontFamily: typography.bodyFont,
+    fontSize: 11,
+    color: colors.textDim,
+    marginTop: 2,
+  },
+  streakDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.06)" },
 
   // Motivation
   motivationCard: {

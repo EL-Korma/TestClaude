@@ -38,7 +38,8 @@
         {
           "fonts": []
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "anthropicApiKey": ""

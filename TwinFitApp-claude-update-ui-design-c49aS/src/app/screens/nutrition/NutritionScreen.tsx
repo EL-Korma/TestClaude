@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
 import { generateRecipe, scanMealFromDescription, RecipeResult, MealScanResult } from "../../../services/anthropic";
+import { recipesApi, mealScansApi } from "../../../services/api";
 
 type Tab = "recipe" | "scan";
 
@@ -179,6 +180,17 @@ const RecipeTab = () => {
     try {
       const result = await generateRecipe(ingredients, selectedGoal.value);
       setRecipe(result);
+      // Save to backend silently
+      recipesApi.save({
+        name: result.name,
+        ingredients: result.ingredients,
+        steps: result.steps,
+        calories: result.calories,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        goal: result.goal,
+      }).catch(() => {});
     } catch (e: any) {
       setError(e.message ?? "Failed to generate recipe. Check your API key.");
     } finally {
@@ -374,6 +386,7 @@ const MealScanTab = () => {
   const [error, setError] = useState<string | null>(null);
   const [portion, setPortion] = useState<"Small" | "Medium" | "Large">("Medium");
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [logged, setLogged] = useState(false);
 
   const scanLineY = useRef(new Animated.Value(0)).current;
   const cornerOp = useRef(new Animated.Value(0.5)).current;
@@ -423,6 +436,7 @@ const MealScanTab = () => {
     setLoading(true);
     setResult(null);
     setError(null);
+    setLogged(false);
     setLoadingMsgIdx(0);
     try {
       const data = await scanMealFromDescription(mealDesc.trim());
@@ -431,6 +445,25 @@ const MealScanTab = () => {
       setError(e.message ?? "Failed to analyze meal.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogMeal = async () => {
+    if (!result || logged) return;
+    const multiplier = PORTION_MULTIPLIERS[portion];
+    const adj = (v: number) => Math.round(v * multiplier);
+    try {
+      await mealScansApi.save({
+        description: mealDesc.trim(),
+        calories: adj(result.calories),
+        protein: adj(result.protein),
+        carbs: adj(result.carbs),
+        fat: adj(result.fat),
+        healthScore: result.healthScore,
+      });
+      setLogged(true);
+    } catch {
+      // ignore save errors — meal was still analyzed
     }
   };
 
@@ -559,9 +592,16 @@ const MealScanTab = () => {
           </View>
 
           {/* Log meal CTA */}
-          <Pressable style={tabStyles.generateBtn}>
-            <LinearGradient colors={["#FF5E1A", "#FF7A3A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={tabStyles.generateBtnGradient}>
-              <Text style={tabStyles.generateBtnText}>LOG THIS MEAL</Text>
+          <Pressable style={tabStyles.generateBtn} onPress={handleLogMeal} disabled={logged}>
+            <LinearGradient
+              colors={logged ? [colors.success, colors.success] : ["#FF5E1A", "#FF7A3A"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={tabStyles.generateBtnGradient}
+            >
+              <Text style={tabStyles.generateBtnText}>
+                {logged ? "✓ MEAL LOGGED" : "LOG THIS MEAL"}
+              </Text>
             </LinearGradient>
           </Pressable>
         </View>
