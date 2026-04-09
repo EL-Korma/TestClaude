@@ -1,10 +1,15 @@
 /**
  * TwinFit API Client
- * Base URL points to the local Express backend on port 4000.
- * In production swap BASE_URL for the deployed server URL.
+ * Reads EXPO_PUBLIC_API_URL from environment (set in .env).
+ * Dev: http://localhost:4000/api
+ * Prod: https://your-app.vercel.app/api
  */
+import Constants from "expo-constants";
 
-const BASE_URL = "http://localhost:4000/api";
+const BASE_URL: string =
+  (Constants.expoConfig?.extra?.apiUrl as string) ??
+  process.env.EXPO_PUBLIC_API_URL ??
+  "http://localhost:4000/api";
 
 // ─── Token store (in-memory) ─────────────────────────────────────────────────
 // For production use expo-secure-store for persistence across restarts.
@@ -123,6 +128,9 @@ export const meApi = {
 
   setActiveBorder: (borderId: string) =>
     apiFetch("/me/border", { method: "PATCH", body: { borderId } }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch("/me/password", { method: "PATCH", body: { currentPassword, newPassword } }),
 };
 
 // ─── Wallet ──────────────────────────────────────────────────────────────────
@@ -331,6 +339,17 @@ export const mealScansApi = {
     apiFetch<{ scans: MealScanRecord[] }>("/meal-scans").then((r) => r.scans),
   save: (data: Omit<MealScanRecord, "id" | "scannedAt">) =>
     apiFetch<{ scan: MealScanRecord }>("/meal-scans", { method: "POST", body: data }).then((r) => r.scan),
+};
+
+// ─── AI ──────────────────────────────────────────────────────────────────────
+
+export const aiApi = {
+  recipe: (ingredients: string[], goal: string) =>
+    apiFetch<{ recipe: any }>("/ai/recipe", { method: "POST", body: { ingredients, goal } })
+      .then((r) => r.recipe),
+  mealScan: (description: string) =>
+    apiFetch<{ scan: any }>("/ai/meal-scan", { method: "POST", body: { description } })
+      .then((r) => r.scan),
 };
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────

@@ -64,7 +64,7 @@ const InputField = ({
 
 export const SignUpScreen = () => {
   const navigation = useNavigation<Nav>();
-  const { register, loading, error, clearError } = useAuth();
+  const { register, loading } = useAuth();
   const [step, setStep] = useState(1);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -98,29 +98,28 @@ export const SignUpScreen = () => {
     const surname = parts.slice(1).join(" ") || "User";
     const username = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") + Math.floor(Math.random() * 1000);
 
-    const ok = await register({
-      name: firstName,
-      surname,
-      username,
-      email: email.trim().toLowerCase(),
-      password,
-      age,
-    });
-    if (!ok) {
-      if (error) Alert.alert("Registration Failed", error, [{ text: "OK", onPress: clearError }]);
-      return;
-    }
+    try {
+      await register({
+        name: firstName,
+        surname,
+        username,
+        email: email.trim().toLowerCase(),
+        password,
+        age,
+      });
 
-    // If partner code entered, try to join the group
-    if (partnerCode.length === 6) {
-      try {
-        await apiFetch("/groups/join", { method: "POST", body: { inviteCode: partnerCode } });
-      } catch {
-        // Non-fatal — user can link later from settings
+      // If partner code entered, try to join the group
+      if (partnerCode.length === 6) {
+        try {
+          await apiFetch("/groups/join", { method: "POST", body: { inviteCode: partnerCode } });
+        } catch {
+          // Non-fatal — user can link later from the Community tab
+        }
       }
+      // Navigation is handled automatically by RootNavigator when user is set
+    } catch (e: any) {
+      Alert.alert("Registration Failed", e.message ?? "Something went wrong. Please try again.");
     }
-
-    navigation.navigate("ModeSelect");
   };
 
   const goNext = () => {

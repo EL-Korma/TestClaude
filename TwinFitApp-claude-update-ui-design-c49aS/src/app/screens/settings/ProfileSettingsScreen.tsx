@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,20 +15,25 @@ import { useNavigation } from "@react-navigation/native";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
 import { useDumbbells, SHOP_BORDERS } from "../../../store/DumbbellStore";
 import { useAuth } from "../../../store/AuthStore";
-import { meApi } from "../../../services/api";
+import { meApi, streaksApi } from "../../../services/api";
 
 const AVATARS = ["🦁", "🦋", "🐺", "🦅", "🐯", "🦊", "🐉", "💪"];
 
 export const ProfileSettingsScreen = () => {
   const navigation = useNavigation();
   const { state, setBorder } = useDumbbells();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const [name, setName] = useState(user ? `${user.name} ${user.surname}` : "");
-  const [bio, setBio] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState("🦁");
+  const [bio, setBio] = useState(user?.profile?.bio ?? "");
+  const [selectedAvatar, setSelectedAvatar] = useState(user?.profile?.avatarEmoji ?? "🦁");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    streaksApi.me().then((s) => { if (s) setStreak(s.current); }).catch(() => {});
+  }, []);
 
   const activeBorder = SHOP_BORDERS.find((b) => b.code === state.activeBorder);
   const borderColor = activeBorder?.color ?? "transparent";
@@ -37,6 +42,7 @@ export const ProfileSettingsScreen = () => {
     setSaving(true);
     try {
       await meApi.updateProfile({ avatarEmoji: selectedAvatar, bio });
+      await refreshUser();
       setSaved(true);
       setTimeout(() => { setSaved(false); navigation.goBack(); }, 1200);
     } catch (e: any) {
@@ -152,8 +158,8 @@ export const ProfileSettingsScreen = () => {
             <Text style={styles.cardTitle}>LIFETIME STATS</Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>14</Text>
-                <Text style={styles.statLabel}>Streak</Text>
+                <Text style={styles.statValue}>{streak}</Text>
+                <Text style={styles.statLabel}>Streak 🔥</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
@@ -162,8 +168,8 @@ export const ProfileSettingsScreen = () => {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>14</Text>
-                <Text style={styles.statLabel}>Sessions</Text>
+                <Text style={styles.statValue}>{state.xp}</Text>
+                <Text style={styles.statLabel}>XP Total</Text>
               </View>
             </View>
           </View>

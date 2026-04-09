@@ -115,6 +115,7 @@ async function runTests() {
     {
       userId: 'user-123',
       availableIngredients: ['poulet', 'riz', 'haricots verts'],
+      servings: 2,
       dietType: 'HIGH_PROTEIN',
       objective: 'BULKING',
     },

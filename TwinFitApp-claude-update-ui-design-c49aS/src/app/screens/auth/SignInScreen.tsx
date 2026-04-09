@@ -23,7 +23,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "Auth">;
 
 export const SignInScreen = () => {
   const navigation = useNavigation<Nav>();
-  const { login, loading, error, clearError } = useAuth();
+  const { login, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
@@ -34,11 +34,11 @@ export const SignInScreen = () => {
       Alert.alert("Missing fields", "Please enter your email and password.");
       return;
     }
-    const ok = await login(email.trim().toLowerCase(), password);
-    if (ok) {
-      navigation.navigate("Main");
-    } else if (error) {
-      Alert.alert("Sign In Failed", error, [{ text: "OK", onPress: clearError }]);
+    try {
+      await login(email.trim().toLowerCase(), password);
+      // Navigation is handled automatically by RootNavigator when user is set
+    } catch (e: any) {
+      Alert.alert("Sign In Failed", e.message ?? "Something went wrong. Please try again.");
     }
   };
 

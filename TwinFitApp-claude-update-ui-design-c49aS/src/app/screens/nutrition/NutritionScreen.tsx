@@ -10,11 +10,25 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
-import { generateRecipe, scanMealFromDescription, RecipeResult, MealScanResult } from "../../../services/anthropic";
-import { recipesApi, mealScansApi } from "../../../services/api";
+import { recipesApi, mealScansApi, aiApi } from "../../../services/api";
+
+// Local types matching API response shape
+type RecipeResult = {
+  name: string; ingredients: string[]; steps: string[];
+  calories: number; protein: number; carbs: number; fat: number;
+  goal?: string; emoji?: string; insight?: string;
+  fibre?: number; iron?: string; vitaminC?: string; sodium?: string; potassium?: string;
+};
+type MealScanResult = {
+  foodName: string; emoji?: string; calories: number; protein: number;
+  carbs: number; fat: number; fibre?: number; healthScore?: number;
+  ingredients?: { name: string; amount: string }[];
+  insight?: string;
+};
 
 type Tab = "recipe" | "scan";
 
@@ -178,7 +192,7 @@ const RecipeTab = () => {
     setError(null);
     setLoadingMsgIdx(0);
     try {
-      const result = await generateRecipe(ingredients, selectedGoal.value);
+      const result = await aiApi.recipe(ingredients, selectedGoal.value) as RecipeResult;
       setRecipe(result);
       // Save to backend silently
       recipesApi.save({
@@ -295,7 +309,7 @@ const RecipeTab = () => {
       {error && (
         <View style={tabStyles.errorCard}>
           <Text style={tabStyles.errorText}>⚠️ {error}</Text>
-          <Text style={tabStyles.errorHint}>Make sure your Anthropic API key is set in src/services/anthropic.ts</Text>
+          <Text style={tabStyles.errorHint}>Make sure OPENAI_API_KEY is set in backend/.env</Text>
         </View>
       )}
 
@@ -387,6 +401,51 @@ const MealScanTab = () => {
   const [portion, setPortion] = useState<"Small" | "Medium" | "Large">("Medium");
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [logged, setLogged] = useState(false);
+  const [listening, setListening] = useState(false);
+  const micPulse = useRef(new Animated.Value(1)).current;
+  const latestDescRef = useRef("");
+
+  useSpeechRecognitionEvent("start", () => setListening(true));
+  useSpeechRecognitionEvent("result", (e) => {
+    const transcript = e.results[0]?.transcript ?? "";
+    if (transcript) {
+      setMealDesc((prev) => {
+        const next = prev ? prev + " " + transcript : transcript;
+        latestDescRef.current = next;
+        return next;
+      });
+    }
+  });
+  useSpeechRecognitionEvent("end", () => {
+    setListening(false);
+    const desc = latestDescRef.current.trim();
+    if (desc) setTimeout(() => handleScan(desc), 150);
+  });
+  useSpeechRecognitionEvent("error", () => setListening(false));
+
+  useEffect(() => {
+    if (listening) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(micPulse, { toValue: 1.3, duration: 500, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1, duration: 500, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      micPulse.stopAnimation();
+      micPulse.setValue(1);
+    }
+  }, [listening]);
+
+  const handleMic = async () => {
+    if (listening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!granted) return;
+    ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: false });
+  };
 
   const scanLineY = useRef(new Animated.Value(0)).current;
   const cornerOp = useRef(new Animated.Value(0.5)).current;
@@ -431,15 +490,17 @@ const MealScanTab = () => {
 
   const scanLineTranslate = scanLineY.interpolate({ inputRange: [0, 1], outputRange: [0, 180] });
 
-  const handleScan = async () => {
-    if (!mealDesc.trim()) return;
+  const handleScan = async (overrideDesc?: string) => {
+    const desc = overrideDesc ?? mealDesc;
+    if (!desc.trim()) return;
+    triggerScanRef.current = null; // clear so it doesn't fire again
     setLoading(true);
     setResult(null);
     setError(null);
     setLogged(false);
     setLoadingMsgIdx(0);
     try {
-      const data = await scanMealFromDescription(mealDesc.trim());
+      const data = await aiApi.mealScan(desc.trim()) as MealScanResult;
       setResult(data);
     } catch (e: any) {
       setError(e.message ?? "Failed to analyze meal.");
@@ -489,16 +550,28 @@ const MealScanTab = () => {
 
       {/* Manual desc input */}
       <Text style={[tabStyles.sectionTitle, { marginTop: 16 }]}>DESCRIBE YOUR MEAL</Text>
-      <View style={[tabStyles.ingredientInput, { marginBottom: 12 }]}>
+      <View style={[tabStyles.ingredientInput, { marginBottom: 12, flexDirection: "row", alignItems: "flex-start" }]}>
         <TextInput
-          style={[tabStyles.input, { minHeight: 52 }]}
+          style={[tabStyles.input, { minHeight: 52, flex: 1 }]}
           placeholder="e.g. Grilled chicken with rice and salad"
           placeholderTextColor={colors.textDim}
           value={mealDesc}
-          onChangeText={setMealDesc}
+          onChangeText={(t) => { setMealDesc(t); latestDescRef.current = t; }}
           multiline
         />
+        <Pressable onPress={handleMic} style={scanStyles.micBtn}>
+          <Animated.View style={[
+            scanStyles.micBtnInner,
+            listening && scanStyles.micBtnActive,
+            { transform: [{ scale: micPulse }] },
+          ]}>
+            <Text style={{ fontSize: 20 }}>{listening ? "⏹️" : "🎙️"}</Text>
+          </Animated.View>
+        </Pressable>
       </View>
+      {listening && (
+        <Text style={scanStyles.listeningLabel}>Listening... speak now</Text>
+      )}
 
       <Pressable
         style={[tabStyles.generateBtn, !mealDesc.trim() && tabStyles.generateBtnDisabled]}
@@ -534,7 +607,7 @@ const MealScanTab = () => {
       {error && (
         <View style={tabStyles.errorCard}>
           <Text style={tabStyles.errorText}>⚠️ {error}</Text>
-          <Text style={tabStyles.errorHint}>Make sure your Anthropic API key is set in src/services/anthropic.ts</Text>
+          <Text style={tabStyles.errorHint}>Make sure OPENAI_API_KEY is set in backend/.env</Text>
         </View>
       )}
 
@@ -752,4 +825,23 @@ const scanStyles = StyleSheet.create({
   portionBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryDim },
   portionText: { fontFamily: typography.displayFont, fontSize: 14, letterSpacing: 1, color: colors.textMuted },
   portionTextActive: { color: colors.primary },
+  micBtn: { paddingLeft: 10, paddingTop: 6 },
+  micBtnInner: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.surface1,
+    borderWidth: 1.5, borderColor: colors.surface2,
+    alignItems: "center", justifyContent: "center",
+  },
+  micBtnActive: {
+    backgroundColor: "rgba(255,94,26,0.15)",
+    borderColor: colors.primary,
+  },
+  listeningLabel: {
+    fontFamily: typography.bodyFont,
+    fontSize: 12,
+    color: colors.primary,
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
 });

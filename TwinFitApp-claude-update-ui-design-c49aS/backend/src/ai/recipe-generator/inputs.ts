@@ -36,7 +36,7 @@ export const RecipeGeneratorInputSchema = z.object({
   maxPrepTime: z.number().int().min(10).max(180).optional(),
 });
 
-export type RecipeGeneratorInput = z.infer<typeof RecipeGeneratorInputSchema>;
+export type RecipeGeneratorInput = z.input<typeof RecipeGeneratorInputSchema>;
 
 export const UserContextSchema = z.object({
   userId: z.string(),

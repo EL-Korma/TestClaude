@@ -6,7 +6,10 @@
       "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(npx kill-port:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(curl -s http://localhost:4000/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"identifier\":\"x\",\"password\":\"x\"}')",
+      "Bash(curl -s http://localhost:8081)",
+      "Bash(npx expo:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

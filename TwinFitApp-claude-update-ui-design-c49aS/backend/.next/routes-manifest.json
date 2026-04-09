@@ -1,1 +1,124 @@
-{"version":3,"caseSensitive":false,"basePath":"","rewrites":{"beforeFiles":[],"afterFiles":[],"fallback":[]},"redirects":[{"source":"/:path+/","destination":"/:path+","permanent":true,"internal":true,"regex":"^(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$"}],"headers":[{"source":"/api/:path*","headers":[{"key":"Access-Control-Allow-Origin","value":"*"},{"key":"Access-Control-Allow-Methods","value":"GET,POST,PATCH,DELETE,OPTIONS"},{"key":"Access-Control-Allow-Headers","value":"Content-Type,Authorization"}],"regex":"^\\/api(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?(?:\\/)?$"}]}
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PATCH,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type,Authorization"
+        }
+      ],
+      "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    }
+  ],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/groups/[id]",
+      "regex": "^/api/groups/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/groups/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/groups/[id]/leave",
+      "regex": "^/api/groups/([^/]+?)/leave(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/groups/(?<nxtPid>[^/]+?)/leave(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/[id]/read",
+      "regex": "^/api/notifications/([^/]+?)/read(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/notifications/(?<nxtPid>[^/]+?)/read(?:/)?$"
+    },
+    {
+      "page": "/api/quests/[code]/claim",
+      "regex": "^/api/quests/([^/]+?)/claim(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/quests/(?<nxtPcode>[^/]+?)/claim(?:/)?$"
+    },
+    {
+      "page": "/api/recipes/[id]",
+      "regex": "^/api/recipes/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/recipes/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/recipes/[id]/save",
+      "regex": "^/api/recipes/([^/]+?)/save(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/recipes/(?<nxtPid>[^/]+?)/save(?:/)?$"
+    },
+    {
+      "page": "/api/shop/borders/[code]/buy",
+      "regex": "^/api/shop/borders/([^/]+?)/buy(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/shop/borders/(?<nxtPcode>[^/]+?)/buy(?:/)?$"
+    },
+    {
+      "page": "/api/streaks/group/[groupId]",
+      "regex": "^/api/streaks/group/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPgroupId": "nxtPgroupId"
+      },
+      "namedRegex": "^/api/streaks/group/(?<nxtPgroupId>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

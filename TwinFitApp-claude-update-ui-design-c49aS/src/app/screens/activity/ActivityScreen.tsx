@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { useNavigation } from "@react-navigation/native";
 import { colors, radii, typography } from "../../../theme/tokens";
 import { notificationsApi, type NotificationItem } from "../../../services/api";
 import { useAuth } from "../../../store/AuthStore";
@@ -77,6 +78,7 @@ const NotifCard = ({
 // ─── ActivityScreen ───────────────────────────────────────────────────────────
 
 export const ActivityScreen = () => {
+  const navigation = useNavigation();
   const { token } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,6 +123,9 @@ export const ActivityScreen = () => {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        {/* Drag handle (modal indicator) */}
+        <View style={styles.dragHandle} />
+
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -129,11 +134,16 @@ export const ActivityScreen = () => {
               <Text style={styles.unreadCount}>{unreadCount} unread</Text>
             )}
           </View>
-          {unreadCount > 0 && (
-            <Pressable onPress={handleReadAll} style={styles.readAllBtn}>
-              <Text style={styles.readAllText}>Mark all read</Text>
+          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+            {unreadCount > 0 && (
+              <Pressable onPress={handleReadAll} style={styles.readAllBtn}>
+                <Text style={styles.readAllText}>Mark all read</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn}>
+              <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
-          )}
+          </View>
         </View>
 
         {/* Tabs */}
@@ -188,14 +198,17 @@ export const ActivityScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   safeArea: { flex: 1 },
+  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.surface2, alignSelf: "center", marginTop: 10, marginBottom: 4 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 12,
   },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.surface2 },
+  closeBtnText: { fontSize: 14, color: colors.textMuted },
   screenTitle: {
     fontFamily: typography.displayFont,
     fontSize: 32,

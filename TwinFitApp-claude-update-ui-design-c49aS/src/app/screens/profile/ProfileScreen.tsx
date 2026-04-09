@@ -9,7 +9,7 @@ import { colors, radii, shadows, typography } from "../../../theme/tokens";
 import { useDumbbells, SHOP_BORDERS } from "../../../store/DumbbellStore";
 import { Counter, DumbbellIcon } from "../../../components";
 import { useAuth } from "../../../store/AuthStore";
-import { streaksApi, type StreakData } from "../../../services/api";
+import { streaksApi, groupsApi, type StreakData } from "../../../services/api";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -21,9 +21,25 @@ export const ProfileScreen = () => {
   const glowAnim = useRef(new Animated.Value(0.4)).current;
   const boostPulse = useRef(new Animated.Value(1)).current;
   const [streak, setStreak] = useState<StreakData | null>(null);
+  const [partner, setPartner] = useState<{ name: string; avatarEmoji: string; streak: number } | null>(null);
 
   useEffect(() => {
-    if (token) streaksApi.me().then((s) => { if (s) setStreak(s); }).catch(() => {});
+    if (!token) return;
+    streaksApi.me().then((s) => { if (s) setStreak(s); }).catch(() => {});
+    groupsApi.mine().then(async (groups) => {
+      const active = groups.find((g) => g.members.filter((m) => m.status !== "LEFT").length >= 2);
+      if (active) {
+        const pm = active.members.find((m) => m.userId !== user?.id && m.status !== "LEFT");
+        if (pm) {
+          const groupStreak = await streaksApi.group(active.id).catch(() => null);
+          setPartner({
+            name: pm.user.name,
+            avatarEmoji: pm.user.profile?.avatarEmoji ?? "🤝",
+            streak: groupStreak?.current ?? 0,
+          });
+        }
+      }
+    }).catch(() => {});
   }, [token]);
 
   const displayName = user ? `${user.name} ${user.surname}` : "Athlete";
@@ -70,12 +86,20 @@ export const ProfileScreen = () => {
           {/* ── Header ──────────────────────────────────────────── */}
           <View style={styles.header}>
             <Text style={styles.screenTitle}>PROFILE</Text>
-            <Pressable
-              style={styles.settingsBtn}
-              onPress={() => navigation.navigate("Settings")}
-            >
-              <Text style={styles.settingsIcon}>⚙️</Text>
-            </Pressable>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                style={styles.settingsBtn}
+                onPress={() => navigation.navigate("Activity")}
+              >
+                <Text style={styles.settingsIcon}>🔔</Text>
+              </Pressable>
+              <Pressable
+                style={styles.settingsBtn}
+                onPress={() => navigation.navigate("Settings")}
+              >
+                <Text style={styles.settingsIcon}>⚙️</Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* ── Avatar card ─────────────────────────────────────── */}
@@ -84,7 +108,7 @@ export const ProfileScreen = () => {
             <Animated.View style={[styles.avatarGlow, { opacity: glowAnim, backgroundColor: borderColor === "transparent" ? colors.primary : borderColor }]} />
 
             <View style={[styles.avatarRing, { borderColor: borderColor === "transparent" ? colors.surface2 : borderColor, shadowColor: borderColor }]}>
-              <Text style={styles.avatarEmoji}>🦁</Text>
+              <Text style={styles.avatarEmoji}>{user?.profile?.avatarEmoji ?? "🦁"}</Text>
             </View>
 
             <Text style={styles.displayName}>{displayName}</Text>
@@ -176,18 +200,30 @@ export const ProfileScreen = () => {
           {/* ── Partner card ─────────────────────────────────────── */}
           <View style={styles.partnerCard}>
             <Text style={styles.partnerTitle}>DUO PARTNER</Text>
-            <View style={styles.partnerRow}>
-              <View style={styles.partnerAvatar}>
-                <Text style={{ fontSize: 28 }}>🦋</Text>
+            {partner ? (
+              <View style={styles.partnerRow}>
+                <View style={styles.partnerAvatar}>
+                  <Text style={{ fontSize: 28 }}>{partner.avatarEmoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.partnerName}>{partner.name}</Text>
+                  <Text style={styles.partnerSub}>🔥 {partner.streak}-day streak together</Text>
+                </View>
+                <View style={styles.partnerStatusBadge}>
+                  <Text style={styles.partnerStatusText}>ACTIVE</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.partnerName}>Aya</Text>
-                <Text style={styles.partnerSub}>🔥 14-day streak together</Text>
+            ) : (
+              <View style={styles.partnerRow}>
+                <View style={[styles.partnerAvatar, { borderColor: colors.surface2 }]}>
+                  <Text style={{ fontSize: 28 }}>👤</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.partnerName}>No Partner Yet</Text>
+                  <Text style={styles.partnerSub}>Go to Community to link up</Text>
+                </View>
               </View>
-              <View style={styles.partnerStatusBadge}>
-                <Text style={styles.partnerStatusText}>ACTIVE</Text>
-              </View>
-            </View>
+            )}
           </View>
 
         </ScrollView>

@@ -8,10 +8,10 @@ import React, {
 } from "react";
 import * as SecureStore from "expo-secure-store";
 import { authApi, setToken, type AuthResponse, type RegisterPayload, meApi } from "../services/api";
+import { registerPushToken } from "../services/notifications";
 
 const TOKEN_KEY = "twinfit_jwt";
 
-// SecureStore doesn't work on web — fall back to localStorage
 const storeToken = async (token: string) => {
   try { await SecureStore.setItemAsync(TOKEN_KEY, token); } catch {
     try { localStorage.setItem(TOKEN_KEY, token); } catch {}
@@ -36,6 +36,16 @@ export interface AuthUser {
   username: string;
   name: string;
   surname: string;
+  age?: number;
+  gender?: string;
+  profile?: {
+    avatarEmoji?: string;
+    avatarType?: string;
+    bio?: string;
+    heightCm?: number;
+    weightKg?: number;
+    activeBorderId?: string;
+  };
 }
 
 interface AuthState {
@@ -43,14 +53,15 @@ interface AuthState {
   token: string | null;
   loading: boolean;
   error: string | null;
-  bootstrapped: boolean; // true once we've checked SecureStore
+  bootstrapped: boolean;
 }
 
 interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (payload: RegisterPayload) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -66,21 +77,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     bootstrapped: false,
   });
 
-  // ── Restore session on app launch ────────────────────────────────────────
+  const fetchAndSetUser = async (token: string) => {
+    const userProfile = await meApi.get();
+    setState({
+      user: userProfile as AuthUser,
+      token,
+      loading: false,
+      error: null,
+      bootstrapped: true,
+    });
+  };
+
   useEffect(() => {
     (async () => {
       try {
         const stored = await loadToken();
         if (stored) {
           setToken(stored);
-          // Verify token is still valid by fetching /me
-          const userProfile = await meApi.get();
-          setState({ user: userProfile as AuthUser, token: stored, loading: false, error: null, bootstrapped: true });
+          await fetchAndSetUser(stored);
         } else {
           setState((s) => ({ ...s, bootstrapped: true }));
         }
       } catch {
-        // Token expired or invalid — clear it
         await clearToken();
         setToken(null);
         setState((s) => ({ ...s, bootstrapped: true }));
@@ -91,38 +109,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const applyAuth = async (res: AuthResponse) => {
     setToken(res.token);
     await storeToken(res.token);
-    setState({
-      user: res.user,
-      token: res.token,
-      loading: false,
-      error: null,
-      bootstrapped: true,
-    });
+    // Fetch full profile (including avatarEmoji, bio, etc.)
+    try {
+      await fetchAndSetUser(res.token);
+    } catch {
+      setState({
+        user: res.user as AuthUser,
+        token: res.token,
+        loading: false,
+        error: null,
+        bootstrapped: true,
+      });
+    }
+    // Register push token (non-blocking)
+    registerPushToken().catch(() => {});
   };
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const res = await authApi.login(email, password);
       await applyAuth(res);
-      return true;
     } catch (e: any) {
-      setState((s) => ({ ...s, loading: false, error: e.message ?? "Login failed" }));
-      return false;
+      const msg = e.message ?? "Login failed";
+      setState((s) => ({ ...s, loading: false, error: msg }));
+      throw new Error(msg);
     }
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload): Promise<boolean> => {
+  const register = useCallback(async (payload: RegisterPayload): Promise<void> => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const res = await authApi.register(payload);
       await applyAuth(res);
-      return true;
     } catch (e: any) {
-      setState((s) => ({ ...s, loading: false, error: e.message ?? "Registration failed" }));
-      return false;
+      const msg = e.message ?? "Registration failed";
+      setState((s) => ({ ...s, loading: false, error: msg }));
+      throw new Error(msg);
     }
   }, []);
+
+  const refreshUser = useCallback(async () => {
+    const currentToken = state.token;
+    if (!currentToken) return;
+    try {
+      await fetchAndSetUser(currentToken);
+    } catch {}
+  }, [state.token]);
 
   const logout = useCallback(async () => {
     setToken(null);
@@ -135,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, clearError }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, clearError, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

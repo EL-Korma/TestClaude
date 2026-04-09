@@ -19,7 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
 import { useDumbbells } from "../../../store/DumbbellStore";
 import { useAuth } from "../../../store/AuthStore";
-import { streaksApi, type StreakData } from "../../../services/api";
+import { streaksApi, groupsApi, notificationsApi, type StreakData } from "../../../services/api";
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, "Home">,
@@ -27,6 +27,27 @@ type Nav = CompositeNavigationProp<
 >;
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+
+// Indexed Sun=0 … Sat=6
+const DAILY_POSES = [
+  { emoji: "🧘", name: "Recovery Warrior",  cue: "Breathe deep. Stretch tall. Honor rest.", color: "#7C6FF7" },
+  { emoji: "🏋️", name: "Power Stance",      cue: "Feet shoulder-width. Chest up. Own the floor.", color: "#FF5E1A" },
+  { emoji: "⚡", name: "Iron Will",          cue: "Arms locked, gaze forward — ready to grind.", color: "#FFD700" },
+  { emoji: "🔥", name: "Beast Mode",         cue: "Hinge at the hips. Explosive. Unstoppable.", color: "#FF3A3A" },
+  { emoji: "💪", name: "The Grinder",        cue: "Low stance. Embrace the burn. Keep moving.", color: "#FF7A3A" },
+  { emoji: "🚀", name: "Finisher",           cue: "Sprint posture. Arms driving. Cross that line.", color: "#00C896" },
+  { emoji: "🦁", name: "Savage Saturday",   cue: "Full power squat. Roar. Dominate the day.", color: "#CD7F32" },
+];
+
+const RESPECT_THEMES = [
+  { title: "Reflect",       body: "Look back at your week. Growth is in the review.",  emoji: "🪞" },
+  { title: "Discipline",    body: "Show up even when motivation is gone. That's the real flex.", emoji: "🎯" },
+  { title: "Consistency",   body: "Small daily wins compound into an unbreakable physique.", emoji: "🧱" },
+  { title: "Respect Your Body", body: "Push hard. Recover harder. Both are training.", emoji: "🩺" },
+  { title: "Mental Toughness", body: "The mind quits long before the body does. Silence it.", emoji: "🧠" },
+  { title: "Gratitude",     body: "Be thankful for the strength you carry every day.", emoji: "🙏" },
+  { title: "Brotherhood",   body: "Your partner chose you. Don't let them log alone.", emoji: "🤝" },
+];
 
 const LOCKED_CARDS = [
   { emoji: "🥈", label: "Silver Pose", hint: "6 sessions away" },
@@ -39,18 +60,47 @@ export const HomeScreen = () => {
   const { state } = useDumbbells();
   const { user, token } = useAuth();
   const firstName = user?.name ?? "Athlete";
+
+  const todayIndex = new Date().getDay(); // 0=Sun
+  const todayPose = DAILY_POSES[todayIndex];
+  const todayTheme = RESPECT_THEMES[todayIndex];
+  const poseGlow = useRef(new Animated.Value(0.5)).current;
+
   const flameScale = useRef(new Animated.Value(1)).current;
   const streakGlow = useRef(new Animated.Value(0.4)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [partner, setPartner] = useState<{ name: string; avatarEmoji: string } | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const bellShake = useRef(new Animated.Value(0)).current;
 
-  // Fetch streak when authenticated
   useEffect(() => {
-    if (token) {
-      streaksApi.me().then((s) => { if (s) setStreak(s); }).catch(() => {});
-    }
+    if (!token) return;
+    streaksApi.me().then((s) => { if (s) setStreak(s); }).catch(() => {});
+    notificationsApi.list().then((notifs) => {
+      const count = notifs.filter((n) => !n.readAt).length;
+      setUnreadCount(count);
+      if (count > 0) {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(bellShake, { toValue: 6, duration: 80, useNativeDriver: true }),
+            Animated.timing(bellShake, { toValue: -6, duration: 80, useNativeDriver: true }),
+            Animated.timing(bellShake, { toValue: 4, duration: 80, useNativeDriver: true }),
+            Animated.timing(bellShake, { toValue: 0, duration: 80, useNativeDriver: true }),
+            Animated.delay(3000),
+          ])
+        ).start();
+      }
+    }).catch(() => {});
+    groupsApi.mine().then((groups) => {
+      const active = groups.find((g) => g.members.filter((m) => m.status !== "LEFT").length >= 2);
+      if (active) {
+        const pm = active.members.find((m) => m.userId !== user?.id && m.status !== "LEFT");
+        if (pm) setPartner({ name: pm.user.name, avatarEmoji: pm.user.profile?.avatarEmoji ?? "🤝" });
+      }
+    }).catch(() => {});
   }, [token]);
 
   const streakDays = streak?.current ?? 0;
@@ -90,6 +140,13 @@ export const HomeScreen = () => {
         Animated.timing(pulseAnim, { toValue: 0.95, duration: 900, useNativeDriver: true }),
       ])
     ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(poseGlow, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(poseGlow, { toValue: 0.4, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
 
   return (
@@ -102,16 +159,30 @@ export const HomeScreen = () => {
           {/* Header row */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.greeting}>Good morning 👋</Text>
+              <Text style={styles.greeting}>
+                {new Date().getHours() < 12 ? "Good morning 👋" : new Date().getHours() < 18 ? "Good afternoon ⚡" : "Good evening 🌙"}
+              </Text>
               <Text style={styles.duoNames}>{firstName}</Text>
             </View>
             <View style={styles.avatarRow}>
+              <Pressable onPress={() => navigation.navigate("Activity")} style={styles.bellWrap}>
+                <Animated.Text style={[styles.bellIcon, { transform: [{ rotate: bellShake.interpolate({ inputRange: [-6, 6], outputRange: ["-12deg", "12deg"] }) }] }]}>
+                  🔔
+                </Animated.Text>
+                {unreadCount > 0 && (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+                  </View>
+                )}
+              </Pressable>
               <View style={styles.avatarBubble}>
-                <Text style={styles.avatarText}>🦁</Text>
+                <Text style={styles.avatarText}>{user?.profile?.avatarEmoji ?? "🦁"}</Text>
               </View>
-              <View style={[styles.avatarBubble, styles.avatarBubble2]}>
-                <Text style={styles.avatarText}>🦋</Text>
-              </View>
+              {partner && (
+                <View style={[styles.avatarBubble, styles.avatarBubble2]}>
+                  <Text style={styles.avatarText}>{partner.avatarEmoji}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -167,7 +238,7 @@ export const HomeScreen = () => {
                 <View style={styles.duoStatus}>
                   <View style={styles.duoMember}>
                     <View style={[styles.duoAvatar, styles.duoAvatarDone]}>
-                      <Text style={{ fontSize: 22 }}>🦁</Text>
+                      <Text style={{ fontSize: 22 }}>{user?.profile?.avatarEmoji ?? "🦁"}</Text>
                     </View>
                     <View style={styles.checkBadge}>
                       <Text style={styles.checkIcon}>✓</Text>
@@ -182,17 +253,19 @@ export const HomeScreen = () => {
                   </View>
 
                   <View style={styles.duoMember}>
-                    <Animated.View style={[styles.duoAvatar, styles.duoAvatarPending, { transform: [{ scale: pulseAnim }] }]}>
-                      <Text style={{ fontSize: 22 }}>🦋</Text>
+                    <Animated.View style={[styles.duoAvatar, partner ? styles.duoAvatarDone : styles.duoAvatarPending, { transform: [{ scale: pulseAnim }] }]}>
+                      <Text style={{ fontSize: 22 }}>{partner ? partner.avatarEmoji : "👤"}</Text>
                     </Animated.View>
-                    <View style={styles.pendingBadge}>
-                      <Text style={styles.pendingIcon}>⏳</Text>
-                    </View>
-                    <Text style={styles.duoName}>Aya</Text>
+                    {partner ? (
+                      <View style={styles.checkBadge}><Text style={styles.checkIcon}>✓</Text></View>
+                    ) : (
+                      <View style={styles.pendingBadge}><Text style={styles.pendingIcon}>⏳</Text></View>
+                    )}
+                    <Text style={styles.duoName}>{partner ? partner.name.split(" ")[0] : "Partner"}</Text>
                   </View>
                 </View>
 
-                <Text style={styles.streakSubline}>Keep the streak alive!</Text>
+                <Text style={styles.streakSubline}>{partner ? "Training together!" : "Invite a partner!"}</Text>
               </View>
             </View>
 
@@ -264,19 +337,43 @@ export const HomeScreen = () => {
 
           <Pressable style={styles.poseCard} onPress={() => navigation.navigate("Log")}>
             <LinearGradient
-              colors={["#1C1C1C", "#242424"]}
-              style={styles.poseCardInner}
+              colors={["#1C1008", "#1A1A1A"]}
+              style={[styles.poseCardInner, { borderLeftWidth: 3, borderLeftColor: todayPose.color }]}
             >
-              <Text style={{ fontSize: 56 }}>🏋️</Text>
+              {/* Glow dot */}
+              <Animated.View style={[styles.poseGlowDot, { backgroundColor: todayPose.color, opacity: poseGlow }]} />
+              <Text style={{ fontSize: 56 }}>{todayPose.emoji}</Text>
               <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text style={styles.poseName}>Power Stance</Text>
-                <Text style={styles.poseDesc}>Match this pose to log your session today</Text>
+                <View style={[styles.poseDayBadge, { backgroundColor: `${todayPose.color}22`, borderColor: `${todayPose.color}66` }]}>
+                  <Text style={[styles.poseDayBadgeText, { color: todayPose.color }]}>
+                    {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][todayIndex]} · DAILY POSE
+                  </Text>
+                </View>
+                <Text style={styles.poseName}>{todayPose.name}</Text>
+                <Text style={styles.poseDesc}>{todayPose.cue}</Text>
                 <View style={styles.poseCtaRow}>
-                  <Text style={styles.poseCta}>TAP TO LOG →</Text>
+                  <Text style={[styles.poseCta, { color: todayPose.color }]}>TAP TO LOG →</Text>
                 </View>
               </View>
             </LinearGradient>
           </Pressable>
+
+          {/* ── Today's respect theme ──────────────────────────────── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>TODAY'S THEME</Text>
+          </View>
+
+          <LinearGradient
+            colors={["#0F0F1A", "#1A1A2E"]}
+            style={styles.themeCard}
+          >
+            <Animated.View style={[styles.themeGlow, { opacity: poseGlow }]} />
+            <Text style={styles.themeEmoji}>{todayTheme.emoji}</Text>
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <Text style={styles.themeTitle}>{todayTheme.title.toUpperCase()}</Text>
+              <Text style={styles.themeBody}>{todayTheme.body}</Text>
+            </View>
+          </LinearGradient>
 
           {/* ── Locked cards teaser ────────────────────────────────── */}
           <View style={styles.sectionHeader}>
@@ -318,7 +415,11 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   greeting: { fontFamily: typography.bodyFont, fontSize: 14, color: colors.textMuted },
   duoNames: { fontFamily: typography.displayFont, fontSize: 28, letterSpacing: 1, color: colors.textPrimary },
-  avatarRow: { flexDirection: "row" },
+  avatarRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bellWrap: { position: "relative", width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  bellIcon: { fontSize: 22 },
+  bellBadge: { position: "absolute", top: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.bg },
+  bellBadgeText: { fontFamily: typography.displayFont, fontSize: 9, color: "#fff" },
   avatarBubble: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.surface1, borderWidth: 2, borderColor: colors.surface2, alignItems: "center", justifyContent: "center" },
   avatarBubble2: { marginLeft: -10, borderColor: colors.primary },
   avatarText: { fontSize: 22 },
@@ -391,12 +492,53 @@ const styles = StyleSheet.create({
   bronzeBadgeText: { fontFamily: typography.displayFont, fontSize: 11, letterSpacing: 0.8, color: "#CD7F32" },
 
   // Pose card
-  poseCard: { borderRadius: radii.xl, overflow: "hidden", marginBottom: 24, ...shadows.card },
-  poseCardInner: { flexDirection: "row", padding: 20, alignItems: "center" },
+  poseCard: { borderRadius: radii.xl, overflow: "hidden", marginBottom: 16, ...shadows.card },
+  poseCardInner: { flexDirection: "row", padding: 20, alignItems: "center", position: "relative" },
+  poseGlowDot: {
+    position: "absolute", top: 12, right: 12,
+    width: 8, height: 8, borderRadius: 4,
+  },
+  poseDayBadge: {
+    alignSelf: "flex-start", borderRadius: radii.pill,
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderWidth: 1, marginBottom: 6,
+  },
+  poseDayBadgeText: { fontFamily: typography.displayFont, fontSize: 10, letterSpacing: 1.5 },
   poseName: { fontFamily: typography.displayFont, fontSize: 22, letterSpacing: 1, color: colors.textPrimary, marginBottom: 4 },
   poseDesc: { fontFamily: typography.bodyFont, fontSize: 13, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
   poseCtaRow: { flexDirection: "row" },
-  poseCta: { fontFamily: typography.displayFont, fontSize: 13, letterSpacing: 1.5, color: colors.primary },
+  poseCta: { fontFamily: typography.displayFont, fontSize: 13, letterSpacing: 1.5 },
+
+  // Respect theme card
+  themeCard: {
+    borderRadius: radii.xl,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "rgba(124,111,247,0.25)",
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  themeGlow: {
+    position: "absolute", top: -30, right: -30,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: "#7C6FF7",
+  },
+  themeEmoji: { fontSize: 40 },
+  themeTitle: {
+    fontFamily: typography.displayFont,
+    fontSize: 18, letterSpacing: 2,
+    color: "#A89FF7",
+    marginBottom: 6,
+  },
+  themeBody: {
+    fontFamily: typography.bodyFont,
+    fontSize: 13, color: colors.textMuted,
+    lineHeight: 19,
+  },
 
   // Dumbbell widget
   dumbbellWidget: { borderRadius: radii.xl, overflow: "hidden", marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,94,26,0.35)" },

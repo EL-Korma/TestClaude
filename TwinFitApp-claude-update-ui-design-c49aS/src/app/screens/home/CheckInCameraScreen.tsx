@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,22 +11,31 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { Camera, CameraView } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { colors, radii, shadows, typography } from "../../../theme/tokens";
-import { checkInsApi } from "../../../services/api";
+import { checkInsApi, groupsApi } from "../../../services/api";
+import { uploadPhoto } from "../../../services/storage";
 import { useDumbbells } from "../../../store/DumbbellStore";
 
 export const CheckInCameraScreen = () => {
   const navigation = useNavigation<any>();
   const { earn } = useDumbbells();
 
-  const [permission, requestPermission] = Camera.useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [facing, setFacing] = useState<"front" | "back">("front");
   const [capturing, setCapturing] = useState(false);
   const [done, setDone] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    groupsApi.mine().then((groups) => {
+      const active = groups.find((g) => g.members.filter((m) => m.status !== "LEFT").length >= 2);
+      if (active) setActiveGroupId(active.id);
+    }).catch(() => {});
+  }, []);
 
   const flashScreen = () => {
     Animated.sequence([
@@ -40,11 +49,20 @@ export const CheckInCameraScreen = () => {
     setCapturing(true);
     flashScreen();
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.6, base64: false });
-      const photoUrl = photo?.uri ?? "placeholder://checkin";
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: false });
+      if (!photo?.uri) throw new Error("Photo capture failed");
 
-      // POST check-in (groupId is optional for now — null means personal check-in)
-      await checkInsApi.create("", photoUrl);
+      // Upload to Supabase Storage — get CDN URL
+      let photoUrl: string;
+      try {
+        photoUrl = await uploadPhoto(photo.uri);
+      } catch {
+        // Fallback to local URI if upload fails (dev/offline scenario)
+        photoUrl = photo.uri;
+      }
+
+      // POST check-in
+      await checkInsApi.create(activeGroupId ?? "", photoUrl);
 
       // Reward 15 dumbbells for check-in
       earn(15);

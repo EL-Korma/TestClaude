@@ -7,6 +7,9 @@ import { AuthStack } from "./AuthStack";
 import { MainTabs } from "./MainTabs";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { ProfileSettingsScreen } from "../screens/settings/ProfileSettingsScreen";
+import { ChangePasswordScreen } from "../screens/settings/ChangePasswordScreen";
+import { LinkedPartnerScreen } from "../screens/settings/LinkedPartnerScreen";
+import { ActivityScreen } from "../screens/activity/ActivityScreen";
 import { ShopScreen } from "../screens/shop/ShopScreen";
 import { QuestsScreen } from "../screens/quests/QuestsScreen";
 import { useAuth } from "../../store/AuthStore";
@@ -19,6 +22,9 @@ export type RootStackParamList = {
   Main: undefined;
   Settings: undefined;
   ProfileSettings: undefined;
+  ChangePassword: undefined;
+  LinkedPartner: undefined;
+  Activity: undefined;
   Shop: undefined;
   Quests: undefined;
 };
@@ -28,7 +34,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export const RootNavigator = () => {
   const { user, bootstrapped } = useAuth();
 
-  // Wait for SecureStore token restore before rendering navigation
   if (!bootstrapped) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
@@ -46,22 +51,23 @@ export const RootNavigator = () => {
       }}
     >
       {!user ? (
-        // ── Unauthenticated ─────────────────────────────────────
         <>
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Auth" component={AuthStack} />
           <Stack.Screen name="ModeSelect" component={ModeSelectScreen} />
         </>
       ) : (
-        // ── Authenticated ───────────────────────────────────────
         <>
-          <Stack.Screen
-            name="Main"
-            component={MainTabs}
-            options={{ animation: "fade" }}
-          />
+          <Stack.Screen name="Main" component={MainTabs} options={{ animation: "fade" }} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+          <Stack.Screen name="LinkedPartner" component={LinkedPartnerScreen} />
+          <Stack.Screen
+            name="Activity"
+            component={ActivityScreen}
+            options={{ animation: "slide_from_bottom", presentation: "modal" }}
+          />
           <Stack.Screen
             name="Shop"
             component={ShopScreen}

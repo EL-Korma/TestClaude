@@ -26,7 +26,7 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import { walletApi, questsApi, shopApi, boostsApi, getToken } from "../services/api";
+import { walletApi, questsApi, shopApi, boostsApi, meApi, getToken } from "../services/api";
 import { useAuth } from "./AuthStore";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -343,7 +343,7 @@ export const DumbbellProvider = ({ children }: { children: ReactNode }) => {
         const border = borders.find((b) => b.code === code);
         if (border) {
           // Update active border on profile via me API
-          import("../services/api").then(({ meApi }) => meApi.setActiveBorder(border.id)).catch(() => {});
+          meApi.setActiveBorder(border.id).catch(() => {});
         }
       }).catch(() => {});
     }

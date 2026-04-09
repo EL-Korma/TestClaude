@@ -14,6 +14,7 @@ import { colors } from "./src/theme/tokens";
 import { ClickSpark } from "./src/components/primitives/ClickSpark";
 import { DumbbellProvider } from "./src/store/DumbbellStore";
 import { AuthProvider } from "./src/store/AuthStore";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 
 const App = () => {
   const [fontsLoaded] = useFonts({
@@ -32,18 +33,22 @@ const App = () => {
   }
 
   return (
-    <AuthProvider>
-      <DumbbellProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar style="light" backgroundColor={colors.bg} />
-            <ClickSpark sparkColor="#FF5E1A" sparkCount={8} sparkRadius={44} sparkSize={4} duration={480}>
-              <RootNavigator />
-            </ClickSpark>
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </DumbbellProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <DumbbellProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <StatusBar style="light" backgroundColor={colors.bg} />
+              <ClickSpark sparkColor="#FF5E1A" sparkCount={8} sparkRadius={44} sparkSize={4} duration={480}>
+                <ErrorBoundary>
+                  <RootNavigator />
+                </ErrorBoundary>
+              </ClickSpark>
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </DumbbellProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 
