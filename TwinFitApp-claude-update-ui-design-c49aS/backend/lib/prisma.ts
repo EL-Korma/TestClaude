@@ -7,8 +7,10 @@ declare global {
 }
 
 function createPrismaClient() {
-  // DATABASE_URL must be the Prisma Accelerate URL (prisma+postgres://...)
-  return new PrismaClient().$extends(withAccelerate());
+  // Prisma 7 + Accelerate requires accelerateUrl in the constructor.
+  // Not in TypeScript types so cast via any.
+  const client = new (PrismaClient as any)({ accelerateUrl: process.env.DATABASE_URL });
+  return client.$extends(withAccelerate());
 }
 
 function getClient() {

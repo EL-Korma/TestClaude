@@ -9,7 +9,11 @@
       "Bash(npx prisma:*)",
       "Bash(curl -s http://localhost:4000/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"identifier\":\"x\",\"password\":\"x\"}')",
       "Bash(curl -s http://localhost:8081)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(curl -s -X POST https://backend-five-beige-39.vercel.app/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Alex\",\"surname\":\"Johnson\",\"username\":\"alexj\",\"email\":\"alex@test.com\",\"password\":\"Test1234!\",\"age\":28,\"gender\":\"MALE\",\"gymFrequency\":\"THREE_TO_FIVE\",\"heightCm\":180,\"weightKg\":80}')",
+      "Bash(curl -s -X POST https://backend-five-beige-39.vercel.app/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Sara\",\"surname\":\"Williams\",\"username\":\"saraw\",\"email\":\"sara@test.com\",\"password\":\"Test1234!\",\"age\":24,\"gender\":\"FEMALE\",\"gymFrequency\":\"SIX_PLUS\",\"heightCm\":165,\"weightKg\":58}')",
+      "Bash(curl -s -X POST https://backend-five-beige-39.vercel.app/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Marcus\",\"surname\":\"Lee\",\"username\":\"marcusl\",\"email\":\"marcus@test.com\",\"password\":\"Test1234!\",\"age\":31,\"gender\":\"MALE\",\"gymFrequency\":\"ONE_TO_TWO\",\"heightCm\":175,\"weightKg\":90}')",
+      "Bash(curl -s -X POST https://backend-five-beige-39.vercel.app/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"test@test.com\",\"password\":\"test\"}')"
     ]
   },
   "enableAllProjectMcpServers": true,
