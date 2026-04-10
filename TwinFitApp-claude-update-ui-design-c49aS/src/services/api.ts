@@ -73,6 +73,9 @@ export interface RegisterPayload {
   password: string;
   age?: number;
   gender?: "MALE" | "FEMALE" | "OTHER";
+  gymFrequency?: "ONE_TO_TWO" | "THREE_TO_FIVE" | "SIX_PLUS";
+  heightCm?: number;
+  weightKg?: number;
 }
 
 export interface AuthResponse {

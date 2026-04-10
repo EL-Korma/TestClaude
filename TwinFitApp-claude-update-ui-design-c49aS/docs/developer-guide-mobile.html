@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0A0A0A"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>TwinFit — Dev Guide</title>
+<style>
+:root{
+  --orange:#FF5E1A;--bg:#0A0A0A;--s0:#141414;--s1:#1C1C1C;--s2:#242424;--s3:#2E2E2E;
+  --text:#F5F0EA;--muted:#7A7570;--dim:#3A3835;
+  --green:#22C55E;--blue:#3B82F6;--purple:#A855F7;--red:#EF4444;--gold:#EAB308;
+  --r:12px;--mono:'Fira Code',monospace;--body:'Inter',system-ui,sans-serif;
+  --safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;font-size:15px;}
+body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.6;overflow-x:hidden;}
+::-webkit-scrollbar{display:none;}
+
+/* PROGRESS */
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),#FF8C42);z-index:999;width:0%;transition:width .1s;pointer-events:none;}
+
+/* TOP NAV */
+#topnav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(10,10,10,0.92);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--s2);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;
+  padding-top:calc(12px + var(--safe-top));
+  height:calc(56px + var(--safe-top));
+}
+.nav-logo{font-size:18px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,var(--orange),#FF8C42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#menu-btn{
+  width:40px;height:40px;display:flex;flex-direction:column;justify-content:center;gap:5px;
+  background:var(--s1);border:1px solid var(--s2);border-radius:10px;padding:10px;cursor:pointer;
+  transition:background .2s;
+}
+#menu-btn.open{background:rgba(255,94,26,0.15);border-color:rgba(255,94,26,0.3);}
+.bar{width:100%;height:2px;background:var(--text);border-radius:2px;transition:all .25s;}
+#menu-btn.open .bar:nth-child(1){transform:translateY(7px) rotate(45deg);}
+#menu-btn.open .bar:nth-child(2){opacity:0;transform:scaleX(0);}
+#menu-btn.open .bar:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+/* DRAWER */
+#drawer{
+  position:fixed;top:0;right:-100%;bottom:0;width:min(300px,85vw);
+  background:var(--s0);border-left:1px solid var(--s2);
+  z-index:190;transition:right .3s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;padding-top:calc(60px + var(--safe-top));padding-bottom:24px;
+}
+#drawer.open{right:0;}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:185;opacity:0;pointer-events:none;transition:opacity .3s;}
+#overlay.show{opacity:1;pointer-events:auto;}
+.d-section{padding:12px 16px 4px;font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;font-weight:600;}
+.d-link{display:flex;align-items:center;gap:10px;padding:11px 20px;color:var(--muted);text-decoration:none;font-size:14px;border-left:3px solid transparent;transition:all .15s;}
+.d-link:active,.d-link.active{color:var(--text);border-left-color:var(--orange);background:rgba(255,94,26,0.07);}
+.d-link .ic{font-size:15px;width:20px;text-align:center;}
+.d-badge{margin-left:auto;background:var(--orange);color:#fff;font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;}
+
+/* CONTENT */
+#content{padding-top:calc(56px + var(--safe-top));}
+
+/* HERO */
+.hero{
+  position:relative;overflow:hidden;
+  padding:36px 20px 40px;border-bottom:1px solid var(--s2);
+}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 100% 60% at 50% 0%,rgba(255,94,26,0.13) 0%,transparent 70%);}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--s2) 1px,transparent 1px),linear-gradient(90deg,var(--s2) 1px,transparent 1px);background-size:32px 32px;opacity:0.25;}
+.hero-inner{position:relative;z-index:1;}
+.live-dot{display:inline-flex;align-items:center;gap:6px;background:rgba(255,94,26,0.1);border:1px solid rgba(255,94,26,0.3);border-radius:20px;padding:4px 12px;font-size:10px;color:var(--orange);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+.live-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.5);}}
+.hero h1{font-size:42px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.hero h1 span{background:linear-gradient(135deg,var(--orange),#FF8C42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:6px;}
+.hero-desc{font-size:14px;color:var(--muted);margin-top:12px;line-height:1.6;}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px;}
+.stat{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:14px 8px;text-align:center;}
+.stat-n{font-size:26px;font-weight:900;color:var(--orange);}
+.stat-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.stat:first-child{border-color:rgba(255,94,26,0.4);animation:glow 3s infinite;}
+@keyframes glow{0%,100%{box-shadow:0 0 0 rgba(255,94,26,0);}50%{box-shadow:0 0 20px rgba(255,94,26,0.3);}}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;}
+.badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid;}
+.bo{color:var(--orange);border-color:rgba(255,94,26,0.35);background:rgba(255,94,26,0.08);}
+.bg{color:var(--green);border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);}
+.bb{color:var(--blue);border-color:rgba(59,130,246,0.35);background:rgba(59,130,246,0.08);}
+.bp{color:var(--purple);border-color:rgba(168,85,247,0.35);background:rgba(168,85,247,0.08);}
+.bgo{color:var(--gold);border-color:rgba(234,179,8,0.35);background:rgba(234,179,8,0.08);}
+
+/* SECTIONS */
+.sec{padding:32px 20px;border-bottom:1px solid var(--s2);opacity:0;transform:translateY(16px);transition:opacity .45s ease,transform .45s ease;}
+.sec.in{opacity:1;transform:none;}
+.sec-title{font-size:22px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px;}
+.sec-title span{color:var(--orange);}
+.sec-desc{color:var(--muted);font-size:13px;margin-bottom:24px;line-height:1.6;}
+h3.sub{font-size:14px;font-weight:700;margin:24px 0 10px;}
+.lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin:20px 0 10px;}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:480px){.cards{grid-template-columns:1fr 1fr;}}
+.card{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:16px;transition:border-color .2s;}
+.card:active{border-color:rgba(255,94,26,0.4);}
+.card-icon{font-size:22px;margin-bottom:8px;}
+.card-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+
+/* CODE */
+.code-wrap{margin:10px 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--s3);border-bottom:none;border-radius:var(--r) var(--r) 0 0;padding:8px 14px;}
+.code-file{font-size:10px;color:var(--orange);font-family:var(--mono);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.code-lang{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin:0 8px;flex-shrink:0;}
+.copy-btn{background:var(--s3);border:none;color:var(--muted);font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;flex-shrink:0;font-family:var(--body);}
+.copy-btn:active{background:var(--orange);color:#fff;}
+pre{background:var(--s1);border:1px solid var(--s3);border-radius:0 0 var(--r) var(--r);padding:14px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.7;-webkit-overflow-scrolling:touch;}
+.kw{color:#C792EA;}.fn{color:#82AAFF;}.str{color:#C3E88D;}.cm{color:#546E7A;font-style:italic;}
+.ty{color:#FFCB6B;}.num{color:#F78C6C;}.at{color:var(--orange);}
+.hl{background:rgba(255,94,26,0.09);display:block;margin:0 -14px;padding:0 14px;}
+
+/* API TABLE - mobile scrollable */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--s2);border-radius:var(--r);-webkit-overflow-scrolling:touch;}
+.api-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:500px;}
+.api-tbl th{background:var(--s2);color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;text-align:left;white-space:nowrap;}
+.api-tbl td{padding:9px 12px;border-bottom:1px solid var(--s2);vertical-align:top;}
+.api-tbl tr:active td{background:var(--s1);}
+.mt{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;min-width:46px;text-align:center;white-space:nowrap;}
+.GET{background:rgba(34,197,94,0.15);color:var(--green);}
+.POST{background:rgba(59,130,246,0.15);color:var(--blue);}
+.PATCH{background:rgba(234,179,8,0.15);color:var(--gold);}
+.DELETE{background:rgba(239,68,68,0.15);color:var(--red);}
+.rp{font-family:var(--mono);font-size:11px;}
+.rd{font-size:11px;color:var(--muted);}
+.ra{font-size:11px;color:var(--orange);}
+.ag{background:var(--s2);font-size:9px;color:var(--orange);letter-spacing:2px;text-transform:uppercase;padding:5px 12px;font-weight:700;}
+
+/* SCHEMA CARDS */
+.schema-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:480px){.schema-grid{grid-template-columns:1fr 1fr;}}
+.sm-card{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);overflow:hidden;}
+.sm-head{background:var(--s2);padding:9px 12px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;}
+.sm-body{padding:10px 12px;}
+.sm-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;}
+.sm-row:last-child{border:none;}
+.fn2{color:var(--text);font-family:var(--mono);}
+.ft{color:var(--blue);font-family:var(--mono);}
+
+/* SCREEN GRID */
+.sc-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:480px){.sc-grid{grid-template-columns:1fr 1fr;}}
+.sc-item{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;}
+.sc-icon{font-size:18px;margin-top:1px;flex-shrink:0;}
+.sc-name{font-size:12px;font-weight:600;margin-bottom:2px;}
+.sc-path{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.sc-tag{font-size:9px;padding:1px 7px;border-radius:10px;font-weight:700;margin-top:4px;display:inline-block;}
+.ta{background:rgba(34,197,94,0.15);color:var(--green);}
+.tm{background:rgba(59,130,246,0.15);color:var(--blue);}
+.tmo{background:rgba(168,85,247,0.15);color:var(--purple);}
+.ton{background:rgba(234,179,8,0.15);color:var(--gold);}
+
+/* FILE TREE */
+.tree{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:16px;font-family:var(--mono);font-size:11px;line-height:1.9;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.td{color:var(--orange);font-weight:600;}
+.tf{color:var(--muted);}
+.th{color:var(--text);font-weight:500;}
+.tc{color:var(--dim);}
+
+/* SWATCHES */
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;}
+@media(min-width:400px){.swatches{grid-template-columns:repeat(4,1fr);}}
+.sw{border-radius:8px;overflow:hidden;}
+.sw-color{height:44px;}
+.sw-info{background:var(--s1);border:1px solid var(--s2);border-top:none;padding:5px 7px;}
+.sw-name{font-size:9px;font-weight:700;}
+.sw-hex{font-size:8px;color:var(--muted);font-family:var(--mono);}
+
+/* ENV TABLE */
+.env-tbl{width:100%;border-collapse:collapse;}
+.env-tbl th{background:var(--s2);color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;text-align:left;}
+.env-tbl td{padding:10px 12px;border-bottom:1px solid var(--s2);font-size:12px;vertical-align:top;}
+.env-tbl td:first-child{color:var(--orange);font-family:var(--mono);font-size:11px;word-break:break-all;}
+.env-req{color:var(--red);font-size:9px;font-weight:700;background:rgba(239,68,68,0.1);padding:1px 6px;border-radius:8px;}
+.env-opt{color:var(--muted);font-size:9px;font-weight:700;background:var(--s2);padding:1px 6px;border-radius:8px;}
+
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:16px 0;}
+.flow-step{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:8px 10px;font-size:11px;text-align:center;flex:1;min-width:80px;}
+.fs-n{font-size:8px;color:var(--orange);font-weight:700;letter-spacing:1px;margin-bottom:3px;}
+.fs-t{font-size:11px;font-weight:600;}
+.fs-s{font-size:9px;color:var(--muted);margin-top:1px;}
+.fa{color:var(--orange);font-size:14px;}
+
+/* DEPLOY */
+.deploy-url{background:var(--s0);border:1px solid var(--s2);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11px;color:var(--orange);word-break:break-all;margin-top:8px;}
+
+/* INFO BOX */
+.info-box{border-radius:var(--r);padding:14px 16px;margin:12px 0;font-size:13px;line-height:1.6;}
+.info-orange{background:rgba(255,94,26,0.07);border:1px solid rgba(255,94,26,0.3);}
+.info-blue{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.3);}
+.info-orange strong{color:var(--orange);}
+.info-blue strong{color:var(--blue);}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(20px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;}
+
+/* FOOTER */
+footer{padding:32px 20px;padding-bottom:calc(32px + var(--safe-bottom));text-align:center;color:var(--dim);font-size:12px;border-top:1px solid var(--s2);}
+footer strong{color:var(--orange);}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+.a1{animation:fadeUp .5s ease .1s both;}
+.a2{animation:fadeUp .5s ease .2s both;}
+.a3{animation:fadeUp .5s ease .3s both;}
+.a4{animation:fadeUp .5s ease .4s both;}
+
+/* ARCH DIAGRAM */
+.arch{display:flex;flex-direction:column;gap:4px;margin:16px 0;}
+.arch-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.arch-box{background:var(--s1);border:1px solid var(--s2);border-radius:var(--r);padding:12px 14px;flex:1;min-width:120px;display:flex;align-items:center;gap:10px;}
+.arch-box .ai{font-size:20px;flex-shrink:0;}
+.arch-box .al{font-size:12px;font-weight:700;}
+.arch-box .as{font-size:10px;color:var(--muted);}
+.arch-box.ao{border-color:rgba(255,94,26,0.4);background:rgba(255,94,26,0.05);}
+.arch-box.ag{border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.05);}
+.arch-box.ab{border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.05);}
+.arch-box.ap{border-color:rgba(168,85,247,0.4);background:rgba(168,85,247,0.05);}
+.a-arr{color:var(--orange);font-size:14px;flex-shrink:0;}
+
+/* INLINE CODE */
+.ic{color:var(--orange);font-family:var(--mono);font-size:0.9em;}
+</style>
+</head>
+<body>
+
+<div id="prog"></div>
+<div id="toast">Copied!</div>
+
+<!-- TOP NAV -->
+<nav id="topnav">
+  <div class="nav-logo">TWINFIT</div>
+  <div id="menu-btn" onclick="toggleMenu()">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+</nav>
+
+<!-- OVERLAY -->
+<div id="overlay" onclick="closeMenu()"></div>
+
+<!-- DRAWER -->
+<div id="drawer">
+  <div class="d-section">Overview</div>
+  <a class="d-link active" href="#overview" onclick="closeMenu()"><span class="ic">🏠</span> Overview</a>
+  <a class="d-link" href="#stack" onclick="closeMenu()"><span class="ic">⚙️</span> Tech Stack</a>
+  <a class="d-link" href="#architecture" onclick="closeMenu()"><span class="ic">🏗️</span> Architecture</a>
+  <a class="d-link" href="#structure" onclick="closeMenu()"><span class="ic">📁</span> File Structure</a>
+  <div class="d-section">Backend</div>
+  <a class="d-link" href="#api" onclick="closeMenu()"><span class="ic">🔌</span> API Routes <span class="d-badge">34</span></a>
+  <a class="d-link" href="#auth-flow" onclick="closeMenu()"><span class="ic">🔐</span> Auth Flow</a>
+  <a class="d-link" href="#database" onclick="closeMenu()"><span class="ic">🗄️</span> Database</a>
+  <a class="d-link" href="#ai" onclick="closeMenu()"><span class="ic">🤖</span> AI Services</a>
+  <div class="d-section">Frontend</div>
+  <a class="d-link" href="#screens" onclick="closeMenu()"><span class="ic">📱</span> Screens <span class="d-badge">25</span></a>
+  <a class="d-link" href="#navigation" onclick="closeMenu()"><span class="ic">🧭</span> Navigation</a>
+  <a class="d-link" href="#state" onclick="closeMenu()"><span class="ic">🧠</span> State</a>
+  <a class="d-link" href="#services" onclick="closeMenu()"><span class="ic">📡</span> Services</a>
+  <div class="d-section">Design &amp; DevOps</div>
+  <a class="d-link" href="#design" onclick="closeMenu()"><span class="ic">🎨</span> Design System</a>
+  <a class="d-link" href="#env" onclick="closeMenu()"><span class="ic">🔑</span> Environment</a>
+  <a class="d-link" href="#deploy" onclick="closeMenu()"><span class="ic">🚀</span> Deployment</a>
+  <a class="d-link" href="#local" onclick="closeMenu()"><span class="ic">💻</span> Local Dev</a>
+</div>
+
+<div id="content">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="live-dot a1">Live Production App</div>
+    <h1 class="a2">TWIN<span>FIT</span></h1>
+    <div class="hero-sub a2">Duo fitness accountability app</div>
+    <p class="hero-desc a3">React Native (Expo 52) + Next.js 15 on Vercel + Supabase PostgreSQL via Prisma 7 + Anthropic Claude AI for nutrition.</p>
+    <div class="hero-stats a4">
+      <div class="stat"><div class="stat-n">34</div><div class="stat-l">API Routes</div></div>
+      <div class="stat"><div class="stat-n">25</div><div class="stat-l">Screens</div></div>
+      <div class="stat"><div class="stat-n">18</div><div class="stat-l">DB Models</div></div>
+    </div>
+    <div class="badges a4">
+      <span class="badge bo">React Native</span>
+      <span class="badge bb">Expo SDK 52</span>
+      <span class="badge bg">Next.js 15</span>
+      <span class="badge bp">Prisma 7</span>
+      <span class="badge bgo">Claude Haiku</span>
+      <span class="badge bg">Supabase</span>
+      <span class="badge bb">Vercel</span>
+      <span class="badge bg">TypeScript</span>
+    </div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<section class="sec" id="overview">
+  <div class="sec-title">What is <span>TwinFit</span>?</div>
+  <p class="sec-desc">A paired fitness app where two people keep each other accountable. Both must check in daily to maintain their shared streak. Core loop: photo check-in → streak → quests → dumbbell economy → shop rewards.</p>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🔥</div><div class="card-title">Duo Streaks</div><div class="card-desc">Both partners log the same day or streak resets. Personal + group streaks tracked separately in DB.</div></div>
+    <div class="card"><div class="card-icon">📸</div><div class="card-title">Photo Check-ins</div><div class="card-desc">Camera uploads to Supabase Storage CDN. Public URL stored in DB so photos persist across devices.</div></div>
+    <div class="card"><div class="card-icon">🧬</div><div class="card-title">AI Nutrition</div><div class="card-desc">Voice or text → Claude Haiku returns calories, protein, carbs, fat, healthScore + generates recipes.</div></div>
+    <div class="card"><div class="card-icon">🏋️</div><div class="card-title">Dumbbell Economy</div><div class="card-desc">Earn via quests. Spend on XP boosts (2–3×), 15 avatar border tiers, and packs.</div></div>
+    <div class="card"><div class="card-icon">⚡</div><div class="card-title">Evolution Tiers</div><div class="card-desc">Bronze→Silver→Gold→Platinum→Legendary. Animated glow nodes on EvolveScreen.</div></div>
+    <div class="card"><div class="card-icon">🔔</div><div class="card-title">Push Notifications</div><div class="card-desc">Expo tokens saved to backend on login. Streak reminders at 8PM daily. Android channels configured.</div></div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section class="sec" id="stack">
+  <div class="sec-title">Tech <span>Stack</span></div>
+  <p class="sec-desc">Every layer with version and rationale.</p>
+  <div class="cards">
+    <div class="card"><div class="card-icon">📱</div><div class="card-title">React Native + Expo SDK 52</div><div class="card-desc">New Architecture (Fabric). React Navigation — NOT Expo Router. expo-secure-store for JWT persistence.</div></div>
+    <div class="card"><div class="card-icon">🖥️</div><div class="card-title">Next.js 15 App Router</div><div class="card-desc">Pure API backend. Handlers in <span class="ic">backend/app/api/**/route.ts</span>. All routes dynamic (ƒ). Vercel serverless.</div></div>
+    <div class="card"><div class="card-icon">🗄️</div><div class="card-title">Prisma 7 + Accelerate</div><div class="card-desc">PostgreSQL via Prisma Accelerate. URL: <span class="ic">prisma+postgres://</span>. Lazy-proxy for Vercel build compat.</div></div>
+    <div class="card"><div class="card-icon">🟩</div><div class="card-title">Supabase</div><div class="card-desc">PG host + Storage bucket <span class="ic">checkins</span> (public, 5MB, JPEG/PNG). RLS policies for SELECT + INSERT.</div></div>
+    <div class="card"><div class="card-icon">🤖</div><div class="card-title">Anthropic Claude Haiku</div><div class="card-desc">Model: <span class="ic">claude-haiku-4-5-20251001</span>. Raw fetch from Next.js. Meal scan + recipe routes.</div></div>
+    <div class="card"><div class="card-icon">🔐</div><div class="card-title">JWT Auth (7-day)</div><div class="card-desc">Signed via <span class="ic">jsonwebtoken</span>. Stored in SecureStore. Sent as Bearer header. Verified via <span class="ic">getUserId(req)</span>.</div></div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="sec" id="architecture">
+  <div class="sec-title">System <span>Architecture</span></div>
+  <p class="sec-desc">How the layers communicate at runtime.</p>
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-box ao"><div class="ai">📱</div><div><div class="al">React Native</div><div class="as">Expo SDK 52</div></div></div>
+      <div class="a-arr">→</div>
+      <div class="arch-box ag"><div class="ai">🚀</div><div><div class="al">Next.js API</div><div class="as">Vercel · iad1</div></div></div>
+    </div>
+    <div class="arch-row" style="padding-left:30px;">
+      <div class="a-arr" style="transform:rotate(90deg);">→</div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-box ab"><div class="ai">🗄️</div><div><div class="al">Prisma Accelerate</div><div class="as">Pool + edge cache</div></div></div>
+      <div class="a-arr">→</div>
+      <div class="arch-box ap"><div class="ai">🟩</div><div><div class="al">Supabase PG</div><div class="as">18 models</div></div></div>
+    </div>
+    <div class="arch-row" style="margin-top:10px;">
+      <div class="arch-box ao"><div class="ai">📸</div><div><div class="al">Camera</div><div class="as">expo-image-picker</div></div></div>
+      <div class="a-arr">→</div>
+      <div class="arch-box ag"><div class="ai">🟩</div><div><div class="al">Supabase Storage</div><div class="as">CDN bucket</div></div></div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-box ao"><div class="ai">🎙️</div><div><div class="al">Voice</div><div class="as">speech-recognition</div></div></div>
+      <div class="a-arr">→</div>
+      <div class="arch-box ap"><div class="ai">🤖</div><div><div class="al">Claude Haiku</div><div class="as">via Next.js route</div></div></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Request Lifecycle</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="fs-n">1</div><div class="fs-t">apiFetch()</div><div class="fs-s">api.ts</div></div>
+    <div class="fa">→</div>
+    <div class="flow-step"><div class="fs-n">2</div><div class="fs-t">Bearer JWT</div><div class="fs-s">header</div></div>
+    <div class="fa">→</div>
+    <div class="flow-step"><div class="fs-n">3</div><div class="fs-t">CORS MW</div><div class="fs-s">middleware.ts</div></div>
+    <div class="fa">→</div>
+    <div class="flow-step"><div class="fs-n">4</div><div class="fs-t">getUserId()</div><div class="fs-s">JWT verify</div></div>
+    <div class="fa">→</div>
+    <div class="flow-step"><div class="fs-n">5</div><div class="fs-t">prisma.*()</div><div class="fs-s">lazy proxy</div></div>
+    <div class="fa">→</div>
+    <div class="flow-step"><div class="fs-n">6</div><div class="fs-t">JSON</div><div class="fs-s">response</div></div>
+  </div>
+</section>
+
+<!-- FILE STRUCTURE -->
+<section class="sec" id="structure">
+  <div class="sec-title">File <span>Structure</span></div>
+  <p class="sec-desc">Key files highlighted in white.</p>
+  <div class="tree">
+<span class="td">TwinFitApp/</span>
+├── <span class="th">App.tsx</span>           <span class="tc"># Root — ErrorBoundary + Providers</span>
+├── <span class="th">app.config.ts</span>    <span class="tc"># Injects API URL as extra.apiUrl</span>
+├── <span class="tf">.env</span>              <span class="tc"># EXPO_PUBLIC_API_URL=...</span>
+│
+├── <span class="td">src/services/</span>
+│   ├── <span class="th">api.ts</span>         <span class="tc"># All API calls + domain namespaces</span>
+│   ├── <span class="th">storage.ts</span>     <span class="tc"># uploadPhoto() → Supabase CDN</span>
+│   └── <span class="th">notifications.ts</span> <span class="tc"># Push token + reminders</span>
+│
+├── <span class="td">src/store/</span>
+│   ├── <span class="th">AuthStore.tsx</span>  <span class="tc"># login/register/logout</span>
+│   └── <span class="th">DumbbellStore.tsx</span> <span class="tc"># Economy reducer</span>
+│
+├── <span class="td">src/theme/</span>
+│   └── <span class="th">tokens.ts</span>      <span class="tc"># colors·radii·spacing·typography</span>
+│
+└── <span class="td">backend/</span>
+    ├── <span class="th">vercel.json</span>     <span class="tc"># prisma generate &amp;&amp; next build</span>
+    ├── <span class="th">middleware.ts</span>   <span class="tc"># CORS for /api/*</span>
+    ├── <span class="td">app/api/</span>        <span class="tc"># 34 route handlers</span>
+    ├── <span class="th">lib/prisma.ts</span>   <span class="tc"># Lazy proxy — no build-time init</span>
+    ├── <span class="th">lib/auth.ts</span>     <span class="tc"># getUserId · signToken</span>
+    └── <span class="th">prisma/schema.prisma</span> <span class="tc"># 18 models</span>
+  </div>
+</section>
+
+<!-- API ROUTES -->
+<section class="sec" id="api">
+  <div class="sec-title">API <span>Routes</span></div>
+  <p class="sec-desc">34 endpoints. Base: <span class="ic">https://backend-five-beige-39.vercel.app/api</span><br/>🔒 = requires <span class="ic">Authorization: Bearer &lt;jwt&gt;</span></p>
+  <div class="tbl-wrap">
+    <table class="api-tbl">
+      <thead><tr><th>Method</th><th>Route</th><th>Auth</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" class="ag">AUTH</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/auth/register</td><td>—</td><td class="rd">Create account. Returns JWT + user.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/auth/login</td><td>—</td><td class="rd">identifier + password → JWT.</td></tr>
+        <tr><td colspan="4" class="ag">ME / PROFILE</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/me</td><td class="ra">🔒</td><td class="rd">Full user + profile.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/me/profile</td><td class="ra">🔒</td><td class="rd">Update avatarEmoji, bio, heightCm, weightKg.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/me/border</td><td class="ra">🔒</td><td class="rd">Set active avatar border by borderId.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/me/password</td><td class="ra">🔒</td><td class="rd">Change password. Verifies current via bcrypt.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/me/push-token</td><td class="ra">🔒</td><td class="rd">Save Expo push token.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/me/groups</td><td class="ra">🔒</td><td class="rd">Groups user belongs to + members.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/me/badges</td><td class="ra">🔒</td><td class="rd">Earned badges.</td></tr>
+        <tr><td colspan="4" class="ag">GROUPS</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/groups</td><td class="ra">🔒</td><td class="rd">Create group. Auto-generates inviteCode.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/groups/:id</td><td class="ra">🔒</td><td class="rd">Group by ID with members.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/groups/join</td><td class="ra">🔒</td><td class="rd">Join by inviteCode → status ACTIVE.</td></tr>
+        <tr><td><span class="mt DELETE">DELETE</span></td><td class="rp">/groups/:id/leave</td><td class="ra">🔒</td><td class="rd">Leave group → status LEFT.</td></tr>
+        <tr><td colspan="4" class="ag">CHECK-INS</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/checkins</td><td class="ra">🔒</td><td class="rd">Body: {groupId, photoUrl (CDN), capturedAt}.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/checkins/me</td><td class="ra">🔒</td><td class="rd">All check-ins by current user.</td></tr>
+        <tr><td colspan="4" class="ag">STREAKS</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/streaks/me</td><td class="ra">🔒</td><td class="rd">Personal streak data.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/streaks/group/:id</td><td class="ra">🔒</td><td class="rd">Shared duo streak.</td></tr>
+        <tr><td colspan="4" class="ag">NOTIFICATIONS</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/notifications</td><td class="ra">🔒</td><td class="rd">All notifications, newest first.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/notifications/:id/read</td><td class="ra">🔒</td><td class="rd">Mark single read.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/notifications/read-all</td><td class="ra">🔒</td><td class="rd">Mark all read.</td></tr>
+        <tr><td colspan="4" class="ag">QUESTS</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/quests</td><td class="ra">🔒</td><td class="rd">All quests with user progress.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/quests/:code/claim</td><td class="ra">🔒</td><td class="rd">Claim reward → updated wallet.</td></tr>
+        <tr><td colspan="4" class="ag">RECIPES &amp; MEAL SCANS</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/recipes</td><td class="ra">🔒</td><td class="rd">Saved recipes.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/recipes</td><td class="ra">🔒</td><td class="rd">Save a generated recipe.</td></tr>
+        <tr><td><span class="mt PATCH">PATCH</span></td><td class="rp">/recipes/:id/save</td><td class="ra">🔒</td><td class="rd">Toggle saved flag.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/meal-scans</td><td class="ra">🔒</td><td class="rd">Meal scan history.</td></tr>
+        <tr><td colspan="4" class="ag">AI — Claude Haiku</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/ai/meal-scan</td><td class="ra">🔒</td><td class="rd">{description} → macros object.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/ai/recipe</td><td class="ra">🔒</td><td class="rd">{ingredients[], goal} → full recipe.</td></tr>
+        <tr><td colspan="4" class="ag">SHOP / WALLET / ECONOMY</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/wallet</td><td class="ra">🔒</td><td class="rd">balance, totalEarned, xp.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/wallet/transactions</td><td class="ra">🔒</td><td class="rd">Transaction history.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/shop/borders</td><td class="ra">🔒</td><td class="rd">All 15 borders with owned:boolean.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/shop/borders/:code/buy</td><td class="ra">🔒</td><td class="rd">Purchase border. Deducts wallet.</td></tr>
+        <tr><td><span class="mt POST">POST</span></td><td class="rp">/boosts</td><td class="ra">🔒</td><td class="rd">{multiplier, durationHours, cost}.</td></tr>
+        <tr><td><span class="mt GET">GET</span></td><td class="rp">/health</td><td>—</td><td class="rd">{status:"ok"} — uptime check.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- AUTH FLOW -->
+<section class="sec" id="auth-flow">
+  <div class="sec-title">Auth <span>Flow</span></div>
+  <p class="sec-desc">JWT-based, stateless backend. Token lives in expo-secure-store.</p>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">backend/lib/auth.ts</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">export function</span> <span class="fn">getUserId</span>(req) {
+  <span class="kw">const</span> token = req.headers
+    .<span class="fn">get</span>(<span class="str">"authorization"</span>)
+    ?.<span class="fn">replace</span>(<span class="str">"Bearer "</span>, <span class="str">""</span>);
+  <span class="kw">try</span> {
+    <span class="kw">const</span> { sub } = jwt.<span class="fn">verify</span>(token, secret);
+    <span class="kw">return</span> sub; <span class="cm">// userId</span>
+  } <span class="kw">catch</span> { <span class="kw">return null</span>; }
+}
+<span class="kw">export function</span> <span class="fn">signToken</span>(userId) {
+  <span class="kw">return</span> jwt.<span class="fn">sign</span>(
+    { sub: userId }, secret, { expiresIn: <span class="str">"7d"</span> }
+  );
+}</pre>
+  </div>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">Every protected route</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">export async function</span> <span class="fn">GET</span>(req) {
+<span class="hl">  <span class="kw">const</span> userId = <span class="fn">getUserId</span>(req);
+  <span class="kw">if</span> (!userId) <span class="kw">return</span> <span class="fn">unauthorized</span>(); <span class="cm">// 401</span></span>
+  <span class="kw">const</span> data = <span class="kw">await</span> prisma.model
+    .<span class="fn">findMany</span>({ where: { userId } });
+  <span class="kw">return</span> Response.<span class="fn">json</span>({ data });
+}</pre>
+  </div>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">AuthStore — applyAuth()</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">const</span> <span class="fn">applyAuth</span> = <span class="kw">async</span> (res) => {
+<span class="hl">  <span class="fn">setToken</span>(res.token);        <span class="cm">// in-memory</span></span>
+<span class="hl">  <span class="kw">await</span> <span class="fn">storeToken</span>(res.token); <span class="cm">// SecureStore</span></span>
+  <span class="kw">await</span> <span class="fn">fetchAndSetUser</span>(res.token);
+  <span class="fn">registerPushToken</span>().<span class="fn">catch</span>(() => {});
+};</pre>
+  </div>
+</section>
+
+<!-- DATABASE -->
+<section class="sec" id="database">
+  <div class="sec-title">Database <span>Schema</span></div>
+  <p class="sec-desc">18 Prisma models on Supabase PostgreSQL. All IDs are CUID strings.</p>
+  <div class="schema-grid">
+    <div class="sm-card"><div class="sm-head">User <span style="color:var(--muted);font-size:10px;">core</span></div><div class="sm-body"><div class="sm-row"><span class="fn2">id</span><span class="ft">String cuid() @id</span></div><div class="sm-row"><span class="fn2">email, username</span><span class="ft">@unique</span></div><div class="sm-row"><span class="fn2">name, surname</span><span class="ft">String</span></div><div class="sm-row"><span class="fn2">passwordHash</span><span class="ft">bcrypt</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">Profile <span style="color:var(--muted);font-size:10px;">1:1</span></div><div class="sm-body"><div class="sm-row"><span class="fn2">avatarEmoji</span><span class="ft">default "🦁"</span></div><div class="sm-row"><span class="fn2">bio, heightCm</span><span class="ft">optional</span></div><div class="sm-row"><span class="fn2">activeBorderId</span><span class="ft">String?</span></div><div class="sm-row"><span class="fn2">objective, dietType</span><span class="ft">String?</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">Group</div><div class="sm-body"><div class="sm-row"><span class="fn2">name, mode</span><span class="ft">String</span></div><div class="sm-row"><span class="fn2">inviteCode</span><span class="ft">@unique</span></div><div class="sm-row"><span class="fn2">members</span><span class="ft">GroupMember[]</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">GroupMember</div><div class="sm-body"><div class="sm-row"><span class="fn2">status</span><span class="ft">INVITED|ACTIVE|LEFT</span></div><div class="sm-row"><span class="fn2">joinedAt</span><span class="ft">DateTime?</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">CheckIn</div><div class="sm-body"><div class="sm-row"><span class="fn2">photoUrl</span><span class="ft">CDN URL</span></div><div class="sm-row"><span class="fn2">status</span><span class="ft">PENDING|VALIDATED</span></div><div class="sm-row"><span class="fn2">capturedAt</span><span class="ft">DateTime</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">Streak</div><div class="sm-body"><div class="sm-row"><span class="fn2">current, longest</span><span class="ft">Int</span></div><div class="sm-row"><span class="fn2">weeklyCount, level</span><span class="ft">Int</span></div><div class="sm-row"><span class="fn2">lastLogDate</span><span class="ft">DateTime?</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">DumbbellWallet</div><div class="sm-body"><div class="sm-row"><span class="fn2">balance</span><span class="ft">Int @default(0)</span></div><div class="sm-row"><span class="fn2">totalEarned, xp</span><span class="ft">Int</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">Quest + Progress</div><div class="sm-body"><div class="sm-row"><span class="fn2">frequency</span><span class="ft">DAILY|WEEKLY|MONTHLY</span></div><div class="sm-row"><span class="fn2">reward, xpReward</span><span class="ft">Int</span></div><div class="sm-row"><span class="fn2">progress</span><span class="ft">Float 0.0–1.0</span></div></div></div>
+    <div class="sm-card"><div class="sm-head">Border + UserBorder</div><div class="sm-body"><div class="sm-row"><span class="fn2">cost</span><span class="ft">Int (dumbbells)</span></div><div class="sm-row"><span class="fn2">rarity</span><span class="ft">COMMON|RARE|LEGEND|MYTHIC</span></div><div class="sm-row"><span class="fn2">color, color2</span><span class="ft">String hex</span></div></div></div>
+  </div>
+</section>
+
+<!-- AI -->
+<section class="sec" id="ai">
+  <div class="sec-title">AI <span>Services</span></div>
+  <p class="sec-desc">Two Claude Haiku endpoints. Raw fetch — no SDK.</p>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">backend/app/api/ai/*/route.ts</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">"https://api.anthropic.com/v1/messages"</span>,
+  {
+    headers: {
+      <span class="str">"x-api-key"</span>: process.env.<span class="at">ANTHROPIC_API_KEY</span>,
+      <span class="str">"anthropic-version"</span>: <span class="str">"2023-06-01"</span>,
+    },
+    body: <span class="ty">JSON</span>.<span class="fn">stringify</span>({
+<span class="hl">      model: <span class="str">"claude-haiku-4-5-20251001"</span>,</span>
+      max_tokens: <span class="num">1024</span>,
+      messages: [{ role: <span class="str">"user"</span>, content: prompt }],
+    }),
+  }
+);</pre>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🍽️</div><div class="card-title">Meal Scan</div><div class="card-desc">POST /ai/meal-scan — text/voice → {calories, protein, carbs, fat, healthScore}. Saves to MealScan table.</div></div>
+    <div class="card"><div class="card-icon">👨‍🍳</div><div class="card-title">Recipe Generator</div><div class="card-desc">POST /ai/recipe — ingredients[] + goal → full recipe with steps + macros. Save via POST /recipes.</div></div>
+    <div class="card"><div class="card-icon">🎙️</div><div class="card-title">Voice Input</div><div class="card-desc">expo-speech-recognition on NutritionScreen. latestDescRef avoids stale closures. Auto-scan 150ms after recognition ends.</div></div>
+  </div>
+</section>
+
+<!-- SCREENS -->
+<section class="sec" id="screens">
+  <div class="sec-title">Frontend <span>Screens</span></div>
+  <p class="sec-desc">25 screens — auth, main tabs, settings, modals.</p>
+  <div class="lbl">Auth &amp; Onboarding</div>
+  <div class="sc-grid">
+    <div class="sc-item"><div class="sc-icon">💥</div><div><div class="sc-name">SplashScreen</div><div class="sc-path">screens/SplashScreen.tsx</div><span class="sc-tag ta">pre-auth</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🏁</div><div><div class="sc-name">ModeSelectScreen</div><div class="sc-path">screens/ModeSelectScreen.tsx</div><span class="sc-tag ton">onboarding</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🔑</div><div><div class="sc-name">SignInScreen</div><div class="sc-path">screens/auth/SignInScreen.tsx</div><span class="sc-tag ta">auth</span></div></div>
+    <div class="sc-item"><div class="sc-icon">📝</div><div><div class="sc-name">SignUpScreen</div><div class="sc-path">screens/auth/SignUpScreen.tsx</div><span class="sc-tag ta">auth</span></div></div>
+  </div>
+  <div class="lbl" style="margin-top:20px;">Main Tabs</div>
+  <div class="sc-grid">
+    <div class="sc-item"><div class="sc-icon">🏠</div><div><div class="sc-name">HomeScreen</div><div class="sc-path">screens/home/HomeScreen.tsx</div><span class="sc-tag tm">tab</span></div></div>
+    <div class="sc-item"><div class="sc-icon">📸</div><div><div class="sc-name">CheckInCameraScreen</div><div class="sc-path">screens/home/CheckInCamera.tsx</div><span class="sc-tag tm">tab</span></div></div>
+    <div class="sc-item"><div class="sc-icon">📋</div><div><div class="sc-name">LogScreen</div><div class="sc-path">screens/home/LogScreen.tsx</div><span class="sc-tag tm">tab</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🥗</div><div><div class="sc-name">NutritionScreen</div><div class="sc-path">screens/nutrition/</div><span class="sc-tag tm">tab</span></div></div>
+    <div class="sc-item"><div class="sc-icon">⚡</div><div><div class="sc-name">EvolveScreen</div><div class="sc-path">screens/evolve/</div><span class="sc-tag tm">tab</span></div></div>
+    <div class="sc-item"><div class="sc-icon">👤</div><div><div class="sc-name">ProfileScreen</div><div class="sc-path">screens/profile/</div><span class="sc-tag tm">tab</span></div></div>
+  </div>
+  <div class="lbl" style="margin-top:20px;">Modals (slide_from_bottom)</div>
+  <div class="sc-grid">
+    <div class="sc-item"><div class="sc-icon">🔔</div><div><div class="sc-name">ActivityScreen</div><div class="sc-path">screens/activity/</div><span class="sc-tag tmo">modal</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🛒</div><div><div class="sc-name">ShopScreen</div><div class="sc-path">screens/shop/</div><span class="sc-tag tmo">modal</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🏆</div><div><div class="sc-name">QuestsScreen</div><div class="sc-path">screens/quests/</div><span class="sc-tag tmo">modal</span></div></div>
+  </div>
+  <div class="lbl" style="margin-top:20px;">Settings Stack</div>
+  <div class="sc-grid">
+    <div class="sc-item"><div class="sc-icon">⚙️</div><div><div class="sc-name">SettingsScreen</div><div class="sc-path">screens/settings/</div><span class="sc-tag tm">settings</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🖼️</div><div><div class="sc-name">ProfileSettingsScreen</div><div class="sc-path">screens/settings/</div><span class="sc-tag tm">settings</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🔏</div><div><div class="sc-name">ChangePasswordScreen</div><div class="sc-path">screens/settings/</div><span class="sc-tag tm">settings</span></div></div>
+    <div class="sc-item"><div class="sc-icon">🤝</div><div><div class="sc-name">LinkedPartnerScreen</div><div class="sc-path">screens/settings/</div><span class="sc-tag tm">settings</span></div></div>
+  </div>
+</section>
+
+<!-- NAVIGATION -->
+<section class="sec" id="navigation">
+  <div class="sec-title">Navigation <span>Structure</span></div>
+  <p class="sec-desc">React Navigation native stack. No Expo Router. Auth-gated stacks.</p>
+  <div class="tree">
+<span class="td">RootStack</span>
+├── <span class="tc">[no user]</span>
+│   ├── Splash
+│   ├── Auth → SignIn · SignUp · Reset
+│   └── ModeSelect
+└── <span class="tc">[user]</span>
+    ├── Main → <span class="td">BottomTabs</span>
+    │   └── Home·Log·Fuel·Evolve·Profile
+    ├── Settings · ProfileSettings
+    │   ChangePassword · LinkedPartner
+    │   <span class="tc">→ slide_from_right</span>
+    └── Activity · Shop · Quests
+        <span class="tc">→ modal slide_from_bottom</span>
+  </div>
+</section>
+
+<!-- STATE -->
+<section class="sec" id="state">
+  <div class="sec-title">State <span>Management</span></div>
+  <p class="sec-desc">Two React Context providers. No Redux. No Zustand.</p>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🔐</div><div class="card-title">useAuth()</div><div class="card-desc">user, token, loading, bootstrapped, login(), register(), logout(), refreshUser(). JWT auto-loaded from SecureStore on boot.</div></div>
+    <div class="card"><div class="card-icon">🏋️</div><div class="card-title">useDumbbells()</div><div class="card-desc">state.{balance, xp, quests, ownedBorders}, earn(), spend(), completeQuest(), purchaseBorder(), activateBoost(). API sync on token change.</div></div>
+  </div>
+  <div class="code-wrap" style="margin-top:14px;">
+    <div class="code-hdr"><span class="code-file">Usage in any screen</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">const</span> { user, logout } = <span class="fn">useAuth</span>();
+<span class="kw">const</span> { state, completeQuest } = <span class="fn">useDumbbells</span>();
+<span class="cm">// state.balance → dumbbell count</span>
+<span class="cm">// state.quests  → live API list</span></pre>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="sec" id="services">
+  <div class="sec-title">Frontend <span>Services</span></div>
+  <p class="sec-desc">Three files handle all external I/O.</p>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">api.ts — exported namespaces</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="cm">// BASE_URL: https://backend-five-beige-39.vercel.app/api</span>
+authApi · meApi · groupsApi · checkInsApi
+streaksApi · notificationsApi · questsApi
+walletApi · shopApi · boostsApi
+mealScansApi · recipesApi · aiApi</pre>
+  </div>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">storage.ts — photo upload</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="cm">// localUri → base64 → Uint8Array</span>
+<span class="cm">// → supabase.storage.from("checkins")</span>
+<span class="cm">//   .upload() → returns publicUrl</span>
+<span class="kw">export async function</span> <span class="fn">uploadPhoto</span>(uri)
+  : Promise&lt;<span class="ty">string</span>&gt;</pre>
+  </div>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">notifications.ts</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="cm">// Called once after login (non-blocking)</span>
+<span class="fn">registerPushToken</span>()   <span class="cm">// saves to /me/push-token</span>
+<span class="fn">scheduleStreakReminder</span>(n) <span class="cm">// 8PM daily</span>
+<span class="fn">clearBadge</span>()           <span class="cm">// resets badge count</span></pre>
+  </div>
+</section>
+
+<!-- DESIGN -->
+<section class="sec" id="design">
+  <div class="sec-title">Design <span>System</span></div>
+  <p class="sec-desc">All tokens in <span class="ic">src/theme/tokens.ts</span>. Never hardcode hex or font names.</p>
+  <h3 class="sub">Colors</h3>
+  <div class="swatches">
+    <div class="sw"><div class="sw-color" style="background:#FF5E1A;"></div><div class="sw-info"><div class="sw-name">primary</div><div class="sw-hex">#FF5E1A</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#0A0A0A;border:1px solid #222;"></div><div class="sw-info"><div class="sw-name">bg</div><div class="sw-hex">#0A0A0A</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#141414;"></div><div class="sw-info"><div class="sw-name">surface0</div><div class="sw-hex">#141414</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#1C1C1C;"></div><div class="sw-info"><div class="sw-name">surface1</div><div class="sw-hex">#1C1C1C</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#F5F0EA;"></div><div class="sw-info"><div class="sw-name">textPrimary</div><div class="sw-hex">#F5F0EA</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#22C55E;"></div><div class="sw-info"><div class="sw-name">success</div><div class="sw-hex">#22C55E</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#3B82F6;"></div><div class="sw-info"><div class="sw-name">info</div><div class="sw-hex">#3B82F6</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#A855F7;"></div><div class="sw-info"><div class="sw-name">purple</div><div class="sw-hex">#A855F7</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#EAB308;"></div><div class="sw-info"><div class="sw-name">warning</div><div class="sw-hex">#EAB308</div></div></div>
+    <div class="sw"><div class="sw-color" style="background:#EF4444;"></div><div class="sw-info"><div class="sw-name">accentRed</div><div class="sw-hex">#EF4444</div></div></div>
+  </div>
+  <h3 class="sub">Typography</h3>
+  <div class="card">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;"><strong style="color:var(--orange);">Bebas Neue</strong> (display) + <strong style="color:var(--orange);">DM Sans</strong> (body)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:var(--muted);">
+      <div>display: 64px/LS2</div><div>h1: 36px/LS1.5</div>
+      <div>body: 16px/LH24</div><div>caption: 12px</div>
+    </div>
+  </div>
+  <h3 class="sub">Spacing &amp; Radii</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="card" style="padding:12px 14px;"><div style="color:var(--orange);font-weight:700;font-size:10px;margin-bottom:6px;">SPACING</div><div style="font-size:11px;color:var(--muted);">xs:6 · sm:10<br/>md:16 · lg:22<br/>xl:28 · xxl:40</div></div>
+    <div class="card" style="padding:12px 14px;"><div style="color:var(--orange);font-weight:700;font-size:10px;margin-bottom:6px;">RADII</div><div style="font-size:11px;color:var(--muted);">xs:8 · sm:12<br/>md:16 · lg:20<br/>xl:28 · pill:999</div></div>
+  </div>
+</section>
+
+<!-- ENV -->
+<section class="sec" id="env">
+  <div class="sec-title">Environment <span>Variables</span></div>
+  <p class="sec-desc">Two .env files. Frontend needs one. Backend needs six.</p>
+  <h3 class="sub">Frontend — <span class="ic">.env</span> (root)</h3>
+  <div class="tbl-wrap">
+    <table class="env-tbl">
+      <thead><tr><th>Variable</th><th>Required</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>EXPO_PUBLIC_API_URL</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">Read via Constants.expoConfig.extra.apiUrl in api.ts</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 class="sub">Backend — <span class="ic">backend/.env</span></h3>
+  <div class="tbl-wrap">
+    <table class="env-tbl">
+      <thead><tr><th>Variable</th><th>Required</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>DATABASE_URL</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">Prisma Accelerate URL (prisma+postgres://...)</td></tr>
+        <tr><td>JWT_SECRET</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">64-char random. Never use "dev_secret" in prod.</td></tr>
+        <tr><td>ANTHROPIC_API_KEY</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">sk-ant-... Used by /ai/* routes only.</td></tr>
+        <tr><td>SUPABASE_URL</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">https://fuevosmyabttixlmevex.supabase.co</td></tr>
+        <tr><td>SUPABASE_ANON_KEY</td><td><span class="env-req">REQUIRED</span></td><td style="font-size:11px;color:var(--muted);">Public key for Storage RLS.</td></tr>
+        <tr><td>SUPABASE_SERVICE_KEY</td><td><span class="env-opt">optional</span></td><td style="font-size:11px;color:var(--muted);">Admin key for RLS bypass.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="info-box info-orange" style="margin-top:14px;">
+    <strong>All 6 backend vars set in Vercel</strong> via <span class="ic">vercel env add VAR production</span>. The backend/.env is for local dev only.
+  </div>
+</section>
+
+<!-- DEPLOY -->
+<section class="sec" id="deploy">
+  <div class="sec-title"><span>Deployment</span></div>
+  <p class="sec-desc">Backend is live on Vercel. Frontend ships via Expo Go locally.</p>
+  <div class="card" style="margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🚀 Backend — Vercel</div>
+    <div style="font-size:12px;color:var(--muted);">karimabidigamixpro-1722s-projects/backend<br/>Region: Washington DC (iad1)</div>
+    <div class="deploy-url">https://backend-five-beige-39.vercel.app</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;">Health: GET /api/health → {"status":"ok"}</div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🟩 Database — Supabase</div>
+    <div style="font-size:12px;color:var(--muted);">fuevosmyabttixlmevex · bucket: checkins (public, 5MB)</div>
+    <div class="deploy-url">https://fuevosmyabttixlmevex.supabase.co</div>
+  </div>
+  <h3 class="sub">Redeploy</h3>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">Terminal</span><span class="code-lang">bash</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre>cd backend
+vercel --prod --yes
+<span class="cm"># Runs: npx prisma generate &amp;&amp; next build</span></pre>
+  </div>
+  <h3 class="sub">Why Lazy Prisma Init?</h3>
+  <div class="info-box info-blue">
+    <strong>Problem:</strong> Next.js 15 executes route modules at build time. <span class="ic">new PrismaClient()</span> at module level crashes the build.<br/><br/>
+    <strong>Fix:</strong> <span class="ic">lib/prisma.ts</span> uses a Proxy — PrismaClient is only created on first actual DB property access (at request time, not build time).
+  </div>
+  <div class="code-wrap" style="margin-top:10px;">
+    <div class="code-hdr"><span class="code-file">backend/lib/prisma.ts</span><span class="code-lang">TS</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="kw">export const</span> prisma = <span class="kw">new</span> <span class="fn">Proxy</span>({}, {
+  <span class="fn">get</span>(_, prop) {
+<span class="hl">    <span class="kw">return</span> <span class="fn">getClient</span>()[prop]; <span class="cm">// lazy</span></span>
+  },
+});</pre>
+  </div>
+</section>
+
+<!-- LOCAL -->
+<section class="sec" id="local">
+  <div class="sec-title">Local <span>Dev</span></div>
+  <p class="sec-desc">Full stack running locally in a few commands.</p>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">First time setup</span><span class="code-lang">bash</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre>npm install
+cd backend &amp;&amp; npm install
+npx prisma generate &amp;&amp; cd ..
+<span class="cm"># Edit .env: EXPO_PUBLIC_API_URL=</span>
+<span class="cm"># http://localhost:4000/api</span></pre>
+  </div>
+  <div class="code-wrap">
+    <div class="code-hdr"><span class="code-file">Daily run</span><span class="code-lang">bash</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+    <pre><span class="cm"># Terminal 1</span>
+cd backend &amp;&amp; npm run dev
+<span class="cm"># Terminal 2</span>
+npx expo start
+<span class="cm"># Port conflict? → npx kill-port 8081</span></pre>
+  </div>
+  <h3 class="sub">Test Accounts</h3>
+  <div class="cards">
+    <div class="card"><div class="card-icon">👤</div><div class="card-title">Account 1</div><div class="card-desc">Email: <span class="ic">alex@twinfit.app</span><br/>Password: <span class="ic">Test1234!</span></div></div>
+    <div class="card"><div class="card-icon">👤</div><div class="card-title">Account 2 (partner)</div><div class="card-desc">Email: <span class="ic">aya@twinfit.app</span><br/>Password: <span class="ic">Test1234!</span></div></div>
+  </div>
+</section>
+
+<footer>
+  Built with <strong>React Native + Expo</strong> · <strong>Next.js 15</strong> · <strong>Prisma 7</strong> · <strong>Supabase</strong> · <strong>Claude Haiku</strong><br/>
+  <span style="margin-top:6px;display:block;">TwinFit Developer Guide · April 2026</span>
+</footer>
+</div><!-- /content -->
+
+<script>
+// Progress bar
+const prog = document.getElementById('prog');
+window.addEventListener('scroll', () => {
+  prog.style.width = (window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100) + '%';
+}, {passive:true});
+
+// Hamburger menu
+function toggleMenu() {
+  const btn = document.getElementById('menu-btn');
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  const open = drawer.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  overlay.classList.toggle('show', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMenu() {
+  document.getElementById('menu-btn').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// Close drawer on nav link click — scroll to section
+document.querySelectorAll('.d-link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    const href = link.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      e.preventDefault();
+      closeMenu();
+      setTimeout(() => {
+        const el = document.querySelector(href);
+        if (el) el.scrollIntoView({behavior:'smooth'});
+      }, 300);
+    }
+  });
+});
+
+// Scroll-in sections
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, {threshold:0.04});
+document.querySelectorAll('.sec').forEach(s => obs.observe(s));
+
+// Active nav link
+const activeObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      document.querySelectorAll('.d-link').forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, {rootMargin:'-40% 0px -50% 0px'});
+document.querySelectorAll('.sec').forEach(s => activeObs.observe(s));
+
+// Copy buttons
+const toast = document.getElementById('toast');
+let tt;
+function cp(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = '✓';
+    toast.classList.add('show');
+    clearTimeout(tt);
+    tt = setTimeout(() => { toast.classList.remove('show'); btn.textContent = 'Copy'; }, 1800);
+  });
+}
+
+// Animated stat counters
+function animN(el, target) {
+  let n = 0;
+  const step = Math.ceil(target / 25);
+  const t = setInterval(() => { n = Math.min(n + step, target); el.textContent = n; if (n >= target) clearInterval(t); }, 50);
+}
+window.addEventListener('load', () => {
+  document.querySelectorAll('.stat-n').forEach(el => animN(el, parseInt(el.textContent)));
+});
+</script>
+</body>
+</html>

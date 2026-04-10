@@ -281,3 +281,13 @@ model XpBoost {
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

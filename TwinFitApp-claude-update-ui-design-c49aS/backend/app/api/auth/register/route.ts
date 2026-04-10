@@ -6,10 +6,15 @@ import { signToken } from "@/lib/auth";
 import { normalizeEmail } from "@/lib/helpers";
 
 export async function POST(req: NextRequest) {
-  const { name, surname, username, email, phone, password } = await req.json().catch(() => ({}));
+  const {
+    name, surname, username, email, phone, password,
+    age, gender, gymFrequency, heightCm, weightKg, avatarEmoji,
+  } = await req.json().catch(() => ({}));
+
   if (!name || !surname || !username || !email || !password) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
+
   const normalizedEmail = normalizeEmail(email);
   const existing = await prisma.user.findFirst({
     where: {
@@ -25,13 +30,36 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(password, 10);
   const userId = createId();
   const user = await prisma.user.create({
-    data: { id: userId, name, surname, username, email: normalizedEmail, phone, passwordHash },
+    data: {
+      id: userId,
+      name,
+      surname,
+      username,
+      email: normalizedEmail,
+      phone,
+      passwordHash,
+      age: age ? Number(age) : undefined,
+      gender: gender ?? undefined,
+    },
   });
+
   await Promise.all([
-    prisma.profile.create({ data: { id: createId(), userId: user.id } }),
+    prisma.profile.create({
+      data: {
+        id: createId(),
+        userId: user.id,
+        gymFrequency: gymFrequency ?? undefined,
+        heightCm: heightCm ? Number(heightCm) : undefined,
+        weightKg: weightKg ? Number(weightKg) : undefined,
+        avatarEmoji: avatarEmoji ?? "🦁",
+      },
+    }),
     prisma.dumbbellWallet.create({ data: { id: createId(), userId: user.id } }),
   ]);
 
   const token = signToken(user.id);
-  return Response.json({ token, user: { id: user.id, name: user.name, username: user.username, email: user.email } });
+  return Response.json({
+    token,
+    user: { id: user.id, name: user.name, username: user.username, email: user.email },
+  });
 }
